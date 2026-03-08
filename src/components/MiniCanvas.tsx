@@ -134,7 +134,8 @@ export default function MiniCanvas({ storageKey, label, width = 300, height = 30
         if (e.pointerType === "mouse" && e.button !== 0 && e.button !== 1) return;
         (e.target as Element).setPointerCapture(e.pointerId);
 
-        if (tool === "pan" || e.button === 1 || (e.touches && e.touches.length > 1)) {
+        const nativeEvent = e.nativeEvent as any;
+        if (tool === "pan" || e.button === 1 || (nativeEvent.touches && nativeEvent.touches.length > 1)) {
             containerRef.current!.dataset.panning = "true";
             containerRef.current!.dataset.startX = e.clientX.toString();
             containerRef.current!.dataset.startY = e.clientY.toString();

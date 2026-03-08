@@ -234,7 +234,8 @@ export default function DrawingBoard() {
         (e.target as Element).setPointerCapture(e.pointerId);
 
         // Pan override with middle click or spacebar (not implemented spacebar yet)
-        if (currentTool === "pan" || e.button === 1 || (e.touches && e.touches.length > 1)) {
+        const nativeEvent = e.nativeEvent as any;
+        if (currentTool === "pan" || e.button === 1 || (nativeEvent.touches && nativeEvent.touches.length > 1)) {
             setIsDrawing(false);
             // Handle panning start
             containerRef.current!.dataset.panning = "true";
