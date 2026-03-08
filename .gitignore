@@ -1,0 +1,64 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ─── Next.js build outputs ───────────────────────────────────────────────────
+/.next/
+/out/
+/build
+
+# ─── Testing & coverage ──────────────────────────────────────────────────────
+/coverage
+*.test.js.snap
+
+# ─── TypeScript ──────────────────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Environment & secrets ───────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Debug & logs ────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lint-output.txt
+
+# ─── OS / Editor ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.pem
+.idea/
+.vscode/settings.json
+.vscode/*.code-workspace
+
+# ─── Deployment ──────────────────────────────────────────────────────────────
+.vercel
+
+# ─── Project-specific (dev scripts, temp files) ──────────────────────────────
+fix_all.js
+fix_lints.js
+fix_missed.js
+fix_remaining.js
+fix_stars.js
+fix_storage.js
+test_auth.js
+skills-lock.json
+
+# ─── Agent & design tooling ───────────────────────────────────────────────────
+.agents/
+design-system/
+
+# ─── Office documents (keep in project but don't track changes) ──────────────
+*.docx
+*.xlsx
+*.pptx
