@@ -4,167 +4,146 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { getStorageKey } from "@/lib/storage";
 import DidacticTooltip, { ExamplePanel } from "@/components/DidacticUI";
+import { Move, ZoomIn, ZoomOut, Paintbrush, MapPin, Trash2, Settings2 } from "lucide-react";
 
 const MAP_TIPS = [
-    "Inizia disegnando i <strong>percorsi principali</strong> (terra/sentiero) — poi aggiungi il resto intorno!",
-    "Ogni mappa ha bisogno di <strong>varietà</strong>: erba, acqua, foresta, pietre... Non usare un solo terreno!",
+    "Muovi la mappa usando <strong>Spazio + Drag</strong> (o seleziona il tool Muovi).",
+    "Fai <strong>Zoom</strong> con la rotellina per scendere nel dettaglio.",
+    "Abilita la vista <strong>ISO</strong> per vedere come apparirebbe in un vero gioco Isometrico 2D!",
     "I <strong>luoghi importanti</strong> (📍) danno vita alla mappa — posiziona villaggio, foresta, dungeon e lago.",
-    "Nei veri giochi, i <strong>level designer</strong> disegnano mappe che guidano il giocatore con percorsi naturali.",
-    "Metti la <strong>lava</strong> (🔥) nelle zone più pericolose — come vicino al dungeon!",
+    "Non aver paura di allargare la mappa nelle <strong>Impostazioni</strong>, i giochi moderni sono enormi!"
 ];
 
-const GRID_SIZE = 20;
-const TERRAIN_COLORS: Record<string, { color: string; label: string; emoji: string }> = {
-    grass: { color: "#22c55e", label: "Erba / Prato", emoji: "🌿" },
-    water: { color: "#3b82f6", label: "Acqua / Fiume", emoji: "💧" },
-    dirt: { color: "#92400e", label: "Terra / Sentiero", emoji: "🟫" },
-    stone: { color: "#6b7280", label: "Pietra / Mura", emoji: "🪨" },
-    forest: { color: "#15803d", label: "Foresta / Alberi", emoji: "🌲" },
-    lava: { color: "#ef4444", label: "Lava / Pericolo", emoji: "🔥" },
+const TERRAIN_COLORS: Record<number, { color: string; label: string; emoji: string }> = {
+    0: { color: "#22c55e", label: "Erba", emoji: "🌿" },
+    1: { color: "#3b82f6", label: "Acqua", emoji: "💧" },
+    2: { color: "#92400e", label: "Terra", emoji: "🟫" },
+    3: { color: "#6b7280", label: "Pietra", emoji: "🪨" },
+    4: { color: "#15803d", label: "Foresta", emoji: "🌲" },
+    5: { color: "#ef4444", label: "Lava", emoji: "🔥" },
 };
 
 const POI_MARKERS = [
-    { id: "village", label: "Villaggio", emoji: "🏘️" },
-    { id: "forest_area", label: "Foresta", emoji: "🌳" },
-    { id: "dungeon", label: "Dungeon / Grotta", emoji: "🏚️" },
-    { id: "lake", label: "Lago / Fiume", emoji: "🌊" },
-    { id: "sage", label: "Casa del Saggio", emoji: "🧙" },
+    { id: 1, label: "Villaggio", emoji: "🏘️" },
+    { id: 2, label: "Foresta", emoji: "🌳" },
+    { id: 3, label: "Dungeon", emoji: "🏚️" },
+    { id: 4, label: "Lago", emoji: "🌊" },
+    { id: 5, label: "Saggio", emoji: "🧙" },
 ];
 
-type POI = { id: string; x: number; y: number };
-
 export default function MappaPage() {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [grid, setGrid] = useState<string[][]>(() =>
-        Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill("grass"))
-    );
-    const [selectedTerrain, setSelectedTerrain] = useState("grass");
-    const [pois, setPois] = useState<POI[]>([]);
-    const [placingPoi, setPlacingPoi] = useState<string | null>(null);
-    const [painting, setPainting] = useState(false);
+    const [gridSize, setGridSize] = useState({ w: 20, h: 20 });
+    const [terrainData, setTerrainData] = useState<Record<string, number>>({});
+    const [pois, setPois] = useState<{ r: number; c: number; id: number }[]>([]);
+
+    const [tool, setTool] = useState<"paint" | "poi" | "pan">("paint");
+    const [selectedTerrain, setSelectedTerrain] = useState(0);
+    const [placingPoi, setPlacingPoi] = useState(1);
+
+    // Viewport
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isIsometric, setIsIsometric] = useState(false);
+    const viewportRef = useRef<HTMLDivElement>(null);
+    const isInteracting = useRef(false);
+
+    const CELL_SIZE = 32;
 
     // Load
     useEffect(() => {
         Promise.resolve().then(() => {
             try {
-                const g = localStorage.getItem(getStorageKey("iq_map_grid")); if (g) setGrid(JSON.parse(g));
-                const p = localStorage.getItem(getStorageKey("iq_map_pois")); if (p) setPois(JSON.parse(p));
+                const g = localStorage.getItem(getStorageKey("iq_alice_map_grid"));
+                const p = localStorage.getItem(getStorageKey("iq_alice_map_pois"));
+                const dim = localStorage.getItem(getStorageKey("iq_alice_map_dim"));
+                if (g) setTerrainData(JSON.parse(g));
+                if (p) setPois(JSON.parse(p));
+                if (dim) setGridSize(JSON.parse(dim));
             } catch { }
         });
     }, []);
 
     // Save
-    useEffect(() => { localStorage.setItem(getStorageKey("iq_map_grid"), JSON.stringify(grid)); }, [grid]);
-    useEffect(() => { localStorage.setItem(getStorageKey("iq_map_pois"), JSON.stringify(pois)); }, [pois]);
+    useEffect(() => {
+        localStorage.setItem(getStorageKey("iq_alice_map_grid"), JSON.stringify(terrainData));
+        localStorage.setItem(getStorageKey("iq_alice_map_pois"), JSON.stringify(pois));
+        localStorage.setItem(getStorageKey("iq_alice_map_dim"), JSON.stringify(gridSize));
+    }, [terrainData, pois, gridSize]);
 
-    // Draw grid
-    const draw = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+    const handleCellInteract = (r: number, c: number) => {
+        if (tool === "pan") return;
 
-        const rect = canvas.getBoundingClientRect();
-        const cellW = rect.width / GRID_SIZE;
-        const cellH = rect.height / GRID_SIZE;
-
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.scale(dpr, dpr);
-
-        // Fill cells
-        grid.forEach((row, y) => {
-            row.forEach((terrain, x) => {
-                ctx.fillStyle = TERRAIN_COLORS[terrain]?.color || "#22c55e";
-                ctx.fillRect(x * cellW, y * cellH, cellW, cellH);
-                // Grid lines
-                ctx.strokeStyle = "rgba(0,0,0,0.15)";
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(x * cellW, y * cellH, cellW, cellH);
+        if (tool === "paint") {
+            setTerrainData(prev => {
+                const nt = { ...prev };
+                if (selectedTerrain === 0) delete nt[`${r},${c}`];
+                else nt[`${r},${c}`] = selectedTerrain;
+                return nt;
             });
-        });
-
-        // Draw POI markers
-        pois.forEach(poi => {
-            const marker = POI_MARKERS.find(m => m.id === poi.id);
-            if (!marker) return;
-            const px = poi.x * cellW + cellW / 2;
-            const py = poi.y * cellH + cellH / 2;
-
-            // Background circle
-            ctx.beginPath();
-            ctx.arc(px, py, Math.min(cellW, cellH) * 0.6, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
-            ctx.fill();
-            ctx.strokeStyle = "#fde68a";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Emoji
-            ctx.font = `${Math.min(cellW, cellH) * 0.7}px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(marker.emoji, px, py);
-        });
-    }, [grid, pois]);
-
-    useEffect(() => { draw(); }, [draw]);
-
-    const getCellFromEvent = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return null;
-        const rect = canvas.getBoundingClientRect();
-        const cellW = rect.width / GRID_SIZE;
-        const cellH = rect.height / GRID_SIZE;
-        const x = Math.floor((e.clientX - rect.left) / cellW);
-        const y = Math.floor((e.clientY - rect.top) / cellH);
-        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return null;
-        return { x, y };
-    };
-
-    const paintCell = (x: number, y: number) => {
-        if (placingPoi) {
-            // Remove existing marker of same type and place new one
-            setPois(prev => [...prev.filter(p => p.id !== placingPoi), { id: placingPoi, x, y }]);
-            setPlacingPoi(null);
-        } else {
-            const copy = grid.map(r => [...r]);
-            copy[y][x] = selectedTerrain;
-            setGrid(copy);
+        } else if (tool === "poi") {
+            setPois(prev => {
+                const arr = [...prev];
+                const existingIdx = arr.findIndex(p => p.r === r && p.c === c);
+                if (existingIdx >= 0) {
+                    if (arr[existingIdx].id === placingPoi) arr.splice(existingIdx, 1);
+                    else arr[existingIdx].id = placingPoi;
+                } else {
+                    arr.push({ r, c, id: placingPoi });
+                }
+                return arr;
+            });
         }
     };
 
-    const handleDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        (e.target as Element).setPointerCapture(e.pointerId);
-        setPainting(true);
-        const cell = getCellFromEvent(e);
-        if (cell) paintCell(cell.x, cell.y);
+    // Viewport Panning & Zooming
+    const handleViewportPointerDown = (e: React.PointerEvent) => {
+        if (e.button === 1 || tool === "pan" || e.button === 2) {
+            e.preventDefault();
+            isInteracting.current = true;
+            viewportRef.current!.dataset.panning = "true";
+            viewportRef.current!.setPointerCapture(e.pointerId);
+        } else if (e.button === 0) {
+            isInteracting.current = true;
+        }
     };
 
-    const handleMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        if (!painting || placingPoi) return;
-        const cell = getCellFromEvent(e);
-        if (cell) paintCell(cell.x, cell.y);
+    const handleViewportPointerMove = (e: React.PointerEvent) => {
+        if (!isInteracting.current) return;
+        if (viewportRef.current?.dataset.panning === "true") {
+            setPan(p => ({ x: p.x + e.movementX, y: p.y + e.movementY }));
+        }
     };
 
-    const handleUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        (e.target as Element).releasePointerCapture(e.pointerId);
-        setPainting(false);
+    const handleViewportPointerUp = (e: React.PointerEvent) => {
+        isInteracting.current = false;
+        if (viewportRef.current?.dataset.panning === "true") {
+            viewportRef.current.dataset.panning = "false";
+            viewportRef.current.releasePointerCapture(e.pointerId);
+        }
     };
+
+    const handleWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            setZoom(z => Math.max(0.2, Math.min(3, z * (e.deltaY > 0 ? 0.9 : 1.1))));
+        } else {
+            setPan(p => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
+        }
+    };
+
+    const recenter = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
     const resetMap = () => {
-        setGrid(Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill("grass")));
-        setPois([]);
-        localStorage.removeItem(getStorageKey("iq_map_grid"));
-        localStorage.removeItem(getStorageKey("iq_map_pois"));
+        if (confirm("Sei sicuro di voler pulire la mappa?")) {
+            setTerrainData({});
+            setPois([]);
+        }
     };
 
     return (
         <div className="flex flex-col items-center min-h-screen p-4 sm:p-8 relative z-10 w-full overflow-x-hidden">
             {/* Header */}
-            <div className="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-center gap-4 mb-4 slide-up">
+            <div className="w-full max-w-7xl flex flex-col sm:flex-row justify-between items-center gap-4 mb-4 slide-up">
                 <div className="text-center sm:text-left">
                     <div className="breadcrumb mb-2">
                         <Link href="/">🏠 Home</Link>
@@ -174,76 +153,178 @@ export default function MappaPage() {
                         <span className="text-emerald-400 font-bold">Mappa</span>
                     </div>
                     <div className="mission-badge mb-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🗺️ Missione 3</div>
-                    <h1 className="text-3xl sm:text-4xl font-black glow-text text-white">La Mappa del Mondo</h1>
-                    <p className="text-emerald-300/60 text-sm mt-1">Disegna la mappa del mondo di Isometric Quest!</p>
+                    <h1 className="text-3xl sm:text-4xl font-black text-white font-mono uppercase">La <span className="text-emerald-400">Mappa</span> del Mondo</h1>
+                    <p className="text-emerald-300/60 text-sm mt-1">L'Overworld principale di Isometric Quest</p>
                 </div>
                 <Link href="/alice" className="btn-secondary text-sm shrink-0">⬅ Alice Hub</Link>
             </div>
 
-            {/* Didactic Elements */}
-            <div className="w-full max-w-6xl mb-4 slide-up" style={{ animationDelay: "0.05s" }}>
+            <div className="w-full max-w-7xl mb-6 slide-up" style={{ animationDelay: "0.05s" }}>
                 <DidacticTooltip tips={MAP_TIPS} emoji="🗺️" />
             </div>
-            <div className="w-full max-w-6xl mb-4 slide-up" style={{ animationDelay: "0.1s" }}>
-                <ExamplePanel title="🏝️ Esempio: come costruire una mappa isometrica"
-                    imageSrc="/assets/world_map_guide.png"
-                    imageAlt="Esempio mappa isometrica con terreni e punti di interesse">
-                    <p>Una buona mappa ha <strong>percorsi chiari</strong> (sentieri di terra), <strong>ostacoli naturali</strong> (fiumi, montagne), e <strong>luoghi interessanti</strong> (villaggio, dungeon, foresta). Guarda l&apos;esempio per ispirazione!</p>
-                </ExamplePanel>
-            </div>
 
-            <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-6">
-                {/* Sidebar – Terrain & POI selectors */}
-                <div className="lg:w-64 shrink-0 space-y-4">
-                    {/* Terrain Legend */}
-                    <div className="quest-card p-4 space-y-2">
-                        <h3 className="text-sm font-bold text-emerald-300">🎨 Terreni</h3>
-                        {Object.entries(TERRAIN_COLORS).map(([key, val]) => (
-                            <button key={key} onClick={() => { setSelectedTerrain(key); setPlacingPoi(null); }}
-                                className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all text-left text-sm ${selectedTerrain === key && !placingPoi ? "bg-emerald-600/30 border border-emerald-400" : "hover:bg-white/5 border border-transparent"}`}>
-                                <div className="w-6 h-6 rounded" style={{ backgroundColor: val.color }} />
-                                <span className="text-white">{val.emoji} {val.label}</span>
-                            </button>
-                        ))}
+            <div className="w-full max-w-7xl flex flex-col xl:flex-row gap-6">
+
+                {/* Left/Top Sidebar Tools */}
+                <div className="xl:w-[320px] shrink-0 space-y-4">
+
+                    {/* Size Settings */}
+                    <div className="quest-card p-5">
+                        <h3 className="text-[10px] font-black text-white/40 mb-3 uppercase tracking-widest flex items-center gap-2"><Settings2 className="w-4 h-4" /> Dimensioni</h3>
+                        <div className="flex gap-4">
+                            <input type="number" min="5" max="100" value={gridSize.w} onChange={e => setGridSize(s => ({ ...s, w: Number(e.target.value) }))} className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-sm text-center focus:border-emerald-500 block" placeholder="W" />
+                            <input type="number" min="5" max="100" value={gridSize.h} onChange={e => setGridSize(s => ({ ...s, h: Number(e.target.value) }))} className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-sm text-center focus:border-emerald-500 block" placeholder="H" />
+                        </div>
                     </div>
 
-                    {/* POI Markers */}
-                    <div className="quest-card p-4 space-y-2">
-                        <h3 className="text-sm font-bold text-amber-400">📍 Luoghi Importanti</h3>
-                        <p className="text-[10px] text-emerald-400">Clicca per posizionare sulla mappa</p>
-                        {POI_MARKERS.map(m => (
-                            <button key={m.id} onClick={() => setPlacingPoi(m.id)}
-                                className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all text-left text-sm ${placingPoi === m.id ? "bg-amber-600/30 border border-amber-400 animate-pulse" : "hover:bg-white/5 border border-transparent"}`}>
-                                <span className="text-xl">{m.emoji}</span>
-                                <span className="text-white">{m.label}</span>
-                                {pois.find(p => p.id === m.id) && <span className="ml-auto text-green-400 text-xs">✓</span>}
-                            </button>
-                        ))}
+                    {/* Example Box */}
+                    <ExamplePanel title="🏞️ Ricorda la varietà!" imageSrc="/assets/world_map_guide.png" imageAlt="Esempio mappa isometrica" />
+
+                    {/* Tool Selection */}
+                    <div className="quest-card p-2 flex flex-col gap-2">
+                        <button onClick={() => setTool("paint")} className={`p-3 rounded-lg transition-all flex items-center gap-3 text-sm font-bold uppercase tracking-wider ${tool === "paint" ? "bg-emerald-600 text-white" : "text-white/50 hover:bg-white/5"}`}>
+                            <Paintbrush className="w-5 h-5" /> Pennello Terreno
+                        </button>
+
+                        {tool === "paint" && (
+                            <div className="grid grid-cols-2 gap-2 p-2 bg-black/30 rounded-xl mt-1 inner-shadow border border-black/50">
+                                {Object.entries(TERRAIN_COLORS).map(([id, t]) => (
+                                    <button key={id} onClick={() => setSelectedTerrain(Number(id))} className={`flex items-center gap-2 p-2 rounded-lg transition-all text-left text-xs ${selectedTerrain === Number(id) ? "bg-emerald-600 border border-emerald-400 shadow-xl" : "hover:bg-white/5 border border-transparent"}`}>
+                                        <div className="w-5 h-5 rounded" style={{ backgroundColor: t.color }} />
+                                        <span className="text-white font-medium">{t.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="h-px bg-white/10 mx-2" />
+
+                        <button onClick={() => setTool("poi")} className={`p-3 rounded-lg transition-all flex items-center gap-3 text-sm font-bold uppercase tracking-wider ${tool === "poi" ? "bg-amber-600 text-white" : "text-white/50 hover:bg-white/5"}`}>
+                            <MapPin className="w-5 h-5" /> Inserisci Luogo
+                        </button>
+
+                        {tool === "poi" && (
+                            <div className="grid grid-cols-1 gap-2 p-2 bg-black/30 rounded-xl mt-1 inner-shadow border border-black/50">
+                                {POI_MARKERS.map(m => (
+                                    <button key={m.id} onClick={() => setPlacingPoi(m.id)} className={`flex items-center gap-3 p-2 rounded-lg transition-all text-left text-sm ${placingPoi === m.id ? "bg-amber-500/30 border border-amber-500" : "hover:bg-white/5 border border-transparent"}`}>
+                                        <span className="text-xl">{m.emoji}</span>
+                                        <span className="text-white/90">{m.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="h-px bg-white/10 mx-2" />
+
+                        <button onClick={() => setTool("pan")} className={`p-3 rounded-lg transition-all flex items-center gap-3 text-sm font-bold uppercase tracking-wider ${tool === "pan" ? "bg-blue-600 text-white" : "text-white/50 hover:bg-white/5"}`}>
+                            <Move className="w-5 h-5" /> Muovi Mappa
+                        </button>
                     </div>
 
-                    <button onClick={resetMap} className="w-full p-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 text-sm">
-                        🗑️ Ricomincia Mappa
+                    <button onClick={resetMap} className="w-full p-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 font-bold uppercase tracking-wider hover:bg-red-500/20 text-sm flex items-center justify-center gap-2">
+                        <Trash2 className="w-4 h-4" /> Ricomincia Mappa
                     </button>
                 </div>
 
-                {/* Map Canvas */}
-                <div className="flex-1">
-                    <div className="w-full aspect-square max-w-[600px] mx-auto rounded-2xl overflow-hidden border-2 border-[#3b2d6e] shadow-2xl">
-                        <canvas
-                            ref={canvasRef}
-                            onPointerDown={handleDown}
-                            onPointerMove={handleMove}
-                            onPointerUp={handleUp}
-                            onPointerCancel={handleUp}
-                            className="w-full h-full cursor-pointer touch-none block"
-                            style={{ imageRendering: "pixelated" }}
-                        />
+                {/* Main Editor Viewport */}
+                <div className="flex-1 flex flex-col gap-4">
+
+                    {/* Viewport Top Controls */}
+                    <div className="flex gap-4 items-center bg-black/40 border border-[#3b2d6e] px-4 py-2 rounded-2xl shadow-xl justify-between">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="text-emerald-400 hover:text-white"><ZoomOut className="w-5 h-5" /></button>
+                            <span className="text-xs font-mono font-bold w-12 text-center text-white/70">{Math.round(zoom * 100)}%</span>
+                            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="text-emerald-400 hover:text-white"><ZoomIn className="w-5 h-5" /></button>
+                            <button onClick={recenter} className="ml-2 px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase text-emerald-400 transition-colors border border-white/5">Centra</button>
+                        </div>
+
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">ISOMETRICO</span>
+                            <div className={`w-12 h-6 rounded-full transition-colors relative ${isIsometric ? 'bg-emerald-500' : 'bg-white/10'}`}>
+                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${isIsometric ? 'translate-x-6' : ''}`}></div>
+                            </div>
+                            <input type="checkbox" className="sr-only" checked={isIsometric} onChange={e => setIsIsometric(e.target.checked)} />
+                        </label>
                     </div>
-                    {placingPoi && (
-                        <p className="text-center text-amber-300 text-sm mt-3 animate-pulse">
-                            👆 Tocca la mappa per posizionare: {POI_MARKERS.find(m => m.id === placingPoi)?.emoji} {POI_MARKERS.find(m => m.id === placingPoi)?.label}
-                        </p>
-                    )}
+
+                    {/* Canvas Area */}
+                    <div
+                        className="w-full min-h-[500px] flex-1 bg-[#050510] border-2 border-[#3b2d6e] rounded-3xl overflow-hidden relative shadow-[inset_0_0_80px_rgba(0,0,0,0.8)]"
+                        onWheel={handleWheel}
+                    >
+                        <div
+                            ref={viewportRef}
+                            className="absolute inset-0 touch-none flex items-center justify-center"
+                            style={{ cursor: tool === "pan" ? "grab" : "crosshair" }}
+                            onPointerDown={handleViewportPointerDown}
+                            onPointerMove={handleViewportPointerMove}
+                            onPointerUp={handleViewportPointerUp}
+                            onPointerLeave={handleViewportPointerUp}
+                            onContextMenu={e => e.preventDefault()}
+                        >
+                            <div
+                                className="transform-gpu transition-transform pointer-events-none"
+                                style={{
+                                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) ${isIsometric ? 'rotateX(60deg) rotateZ(-45deg)' : ''}`,
+                                    width: gridSize.w * CELL_SIZE,
+                                    height: gridSize.h * CELL_SIZE,
+                                    display: "grid",
+                                    gridTemplateColumns: `repeat(${gridSize.w}, ${CELL_SIZE}px)`,
+                                    gridTemplateRows: `repeat(${gridSize.h}, ${CELL_SIZE}px)`,
+                                }}
+                            >
+                                {Array.from({ length: gridSize.h }).map((_, r) => (
+                                    Array.from({ length: gridSize.w }).map((_, c) => {
+                                        const id = `${r},${c}`;
+                                        const terrainId = terrainData[id] || 0;
+                                        const poiData = pois.find(p => p.r === r && p.c === c);
+                                        const poiObj = poiData ? POI_MARKERS.find(m => m.id === poiData.id) : null;
+
+                                        return (
+                                            <div
+                                                key={id}
+                                                className="border-[0.5px] border-black/10 relative overflow-hidden pointer-events-auto"
+                                                style={{ backgroundColor: TERRAIN_COLORS[terrainId]?.color || "#000" }}
+                                                onPointerDown={e => {
+                                                    if (e.button !== 1 && e.button !== 2 && tool !== "pan") {
+                                                        e.stopPropagation();
+                                                        isInteracting.current = true;
+                                                        handleCellInteract(r, c);
+                                                    }
+                                                }}
+                                                onPointerEnter={() => {
+                                                    if (isInteracting.current && tool !== "pan") {
+                                                        handleCellInteract(r, c);
+                                                    }
+                                                }}
+                                            >
+                                                {isIsometric && <div className="absolute inset-0 shadow-[inset_1px_1px_rgba(255,255,255,0.1),inset_-1px_-1px_rgba(0,0,0,0.2)] pointer-events-none" />}
+                                                {poiObj && (
+                                                    <div className="absolute inset-0 flex items-center justify-center text-xl drop-shadow-xl pointer-events-none"
+                                                        style={{ transform: isIsometric ? 'rotateZ(45deg) rotateX(-60deg) scale(1.5) translateY(-5px)' : 'none' }}>
+                                                        {poiObj.emoji}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Hint overlay */}
+                        {tool === "pan" && (
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 border border-blue-400 text-white text-xs px-4 py-2 rounded-full font-bold shadow-xl animate-bounce pointer-events-none">
+                                Trascinamento Attivo
+                            </div>
+                        )}
+                        {tool === "poi" && placingPoi && (
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-amber-600/90 backdrop-blur border border-amber-400 text-white text-xs px-4 py-2 rounded-full font-bold shadow-xl flex items-center gap-2 pointer-events-none">
+                                {POI_MARKERS.find(m => m.id === placingPoi)?.emoji} Clicca sulla mappa
+                            </div>
+                        )}
+                    </div>
+
                 </div>
             </div>
         </div>
