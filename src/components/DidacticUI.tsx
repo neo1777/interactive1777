@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import NextImage from "next/image";
+import { getAssetPath } from "@/lib/utils";
 
 interface DidacticTooltipProps {
     tips: string[];
@@ -87,7 +88,7 @@ export function ExamplePanel({ title, imageSrc, imageAlt, children }: ExamplePan
                 <div className="px-4 pb-4">
                     <div className="relative w-full rounded-xl border border-purple-500/20 bg-black/30 flex justify-center p-2 min-h-[100px]">
                         <NextImage
-                            src={imageSrc}
+                            src={getAssetPath(imageSrc)}
                             alt={imageAlt}
                             width={800}
                             height={400}

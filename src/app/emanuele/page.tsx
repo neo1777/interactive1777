@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStorageKey } from "@/lib/storage";
+import { getAssetPath } from "@/lib/utils";
 import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
@@ -53,7 +54,7 @@ export default function EmanuelePage() {
                 {/* Dashboard Header */}
                 <div className="quest-card overflow-hidden mb-8 slide-up relative min-h-[300px] flex flex-col justify-end p-6 sm:p-10 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] rounded-2xl">
                     <Image
-                        src="/assets/game_designer_banner.png"
+                        src={getAssetPath("/assets/game_designer_banner.png")}
                         alt="Game Design Laboratory"
                         fill
                         className="object-cover object-top opacity-35 mix-blend-screen"
@@ -169,10 +170,9 @@ export default function EmanuelePage() {
                             </div>
                         </div>
 
-                        {/* Game Designer Workbook */}
                         <div className="quest-card overflow-hidden slide-up relative group border-emerald-500/20" style={{ animationDelay: "0.5s" }}>
                             <div className="w-full h-[180px] relative bg-black/80">
-                                <Image src="/assets/game_designer_workbook_cover.png" alt="Manuale del Game Designer" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
+                                <Image src={getAssetPath("/assets/game_designer_workbook_cover.png")} alt="Manuale del Game Designer" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--quest-card)] via-transparent to-transparent pointer-events-none" />
                             </div>
                             <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col items-center">

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStorageKey } from "@/lib/storage";
+import { getAssetPath } from "@/lib/utils";
 
 function getProgressForRole(role: "alice" | "emanuele" | "giuliano"): { done: number; total: number } {
   const has = (k: string) => {
@@ -126,7 +127,7 @@ export default function Home() {
       <div className="w-full mb-8 slide-up">
         <div className="quest-card overflow-hidden relative min-h-[350px] sm:min-h-[450px] flex flex-col justify-end p-6 sm:p-12 border-purple-500/30 shadow-[0_0_50px_rgba(168,85,247,0.15)] rounded-2xl">
           <Image
-            src="/assets/home_hero_banner.png"
+            src={getAssetPath("/assets/home_hero_banner.png")}
             alt="Isometric Quest — Game Development Workshop"
             fill
             className="object-cover object-center opacity-40 mix-blend-screen scale-105"

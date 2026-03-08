@@ -1,23 +1,40 @@
-# Alice Art Director
+# Alice Art Director — Isometric Quest
 
-A comprehensive web application designed as an interactive workbook and art-direction tool for capturing sketches and metadata, offering mini-games, and a personal gallery.
+A comprehensive web application designed as an interactive workbook and art-direction tool for capturing sketches and metadata, offering mission-based progression, mini-games, and a personal gallery.
 
 ## Features
 
-- **Interactive Drawing Board**: An advanced canvas allowing users to draw with different brushes, colors, and an intelligent smoothing assistant (`perfect-freehand`).
-- **Assistants Menu**: Toggle brush smoothing or activate horizontal symmetry mode.
-- **Gallery**: Automatically saves thumbnail snapshots and stroke metadata for previously drawn sketches.
-- **Mini-Games**: 
-  - **Colora le Forme**: An interactive flood-fill (bucket) coloring game utilizing an optimized BFS algorithm.
-  - **Unisci i Puntini**: A connect-the-dots logic game.
-- **Full Responsiveness**: The entire application is mobile-first and fully responsive. The drawing toolbar dynamically wraps, canvases scale to fit the viewport, and touch events are fully supported on smartphones and tablets.
+### 🦸 Alice Hub (Art Director)
+- **Interactive Drawing Board**: Advanced canvas with brushes, colors, flood fill, and a smoothing assistant (`perfect-freehand`).
+- **Mission Progression**:
+  - **Mission 1: I Personaggi**: Design heroes and enemies in 4 directions.
+  - **Mission 2: Gli Oggetti**: Create item loot sets with rarity and descriptions.
+  - **Mission 3: La Mappa**: Design the overworld with terrain types and POIs.
+  - **Mission 4: Le Emozioni**: Sketch character facial expressions and reactions.
+- **Gallery**: View and manage all saved sketches and mission progress.
+
+### 🎮 Emanuele Hub (Game Designer)
+- **Mechanics Design**: Define rules, stats, and gameplay loops.
+- **Enemy Balancing**: Configure HP, ATK, and defense stats for various difficulty levels.
+- **Quest System**: Design objectives and rewards for the adventure.
+
+### 🗺️ Giuliano Hub (Level Designer)
+- **Map Editor**: Pan & Zoom enabled grid for designing complex levels.
+- **Isometric View**: Instant toggle between 2D Top-down and Isometric projections.
+- **Sparse Data Storage**: Optimized saving for large-scale world maps.
+
+### 🕹️ Mini-Games
+- **Colora le Forme**: Flood-fill coloring game with an optimized BFS algorithm.
+- **Unisci i Puntini**: Logic-based connect-the-dots game.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
-- **UI & Styling**: React, Tailwind CSS
+- **UI & Styling**: React, Tailwind CSS, Lucide Icons
 - **Canvas Math**: `perfect-freehand`
-- **Data Persistence**: LocalStorage
+- **Deployment**: GitHub Pages (via GitHub Actions)
+- **Data Persistence**: LocalStorage (Persistent across sessions)
+- **Multi-user Support**: Character/Role isolated storage keys.
 
 ## Development
 
@@ -25,16 +42,17 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Exporting Metadata
+## Deployment
 
-The main Drawing Board (`/lavagna`) records all drawing strokes (x, y, pressure) array and allows exporting this data directly to a `.json` file by selecting "Esporta Dati". This allows external ML pipelines or AI modules to reconstruct and analyze user actions.
+The project is optimized for **GitHub Pages**.
+- **Base Path**: `/interactive1777`
+- **Asset Handling**: Centralized `getAssetPath` utility for reliable loading on subdirectories.
+- **CI/CD**: Automatic build and deploy using GitHub Actions upon pushing to `main`.
+
+## Data Management
+
+The application records all drawing strokes (x, y, pressure) and allow exporting metadata to `.json` for external analysis or reconstruction in AI/ML pipelines.

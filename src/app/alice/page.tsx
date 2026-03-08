@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStorageKey } from "@/lib/storage";
+import { getAssetPath } from "@/lib/utils";
 import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
@@ -53,7 +54,7 @@ export default function AlicePage() {
                 {/* Dashboard Header */}
                 <div className="quest-card overflow-hidden mb-8 slide-up relative min-h-[260px] flex flex-col justify-end p-6 sm:p-8 border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.15)]">
                     <Image
-                        src="/assets/art_director_banner.png"
+                        src={getAssetPath("/assets/art_director_banner.png")}
                         alt="Art Director Hub"
                         fill
                         className="object-cover object-top opacity-30 mix-blend-screen"
@@ -168,15 +169,15 @@ export default function AlicePage() {
                             </h3>
                             <div className="flex items-center justify-center gap-4 flex-wrap">
                                 {[
-                                    { src: "/assets/hero_face.png", label: "Eroe" },
-                                    { src: "/assets/knight_armor.png", label: "Armatura" },
-                                    { src: "/assets/magic_sword.png", label: "Spada" }
-                                ].map(asset => (
-                                    <div key={asset.label} className="text-center group">
+                                    { src: getAssetPath("/assets/hero_face.png"), label: "Eroe" },
+                                    { src: getAssetPath("/assets/knight_armor.png"), label: "Armatura" },
+                                    { src: getAssetPath("/assets/magic_sword.png"), label: "Spada" }
+                                ].map((sketch, i) => (
+                                    <div key={sketch.label} className="text-center group">
                                         <div className="w-14 h-14 relative mx-auto mb-2 bg-black/40 rounded-xl border border-white/5 p-1 group-hover:border-fuchsia-500/40 transition-colors shadow-inner">
-                                            <Image src={asset.src} alt={asset.label} fill className="object-contain" />
+                                            <Image src={sketch.src} alt={sketch.label} fill className="object-contain" />
                                         </div>
-                                        <span className="text-purple-300/50 text-[10px] uppercase font-bold tracking-wider">{asset.label}</span>
+                                        <span className="text-purple-300/50 text-[10px] uppercase font-bold tracking-wider">{sketch.label}</span>
                                     </div>
                                 ))}
                             </div>
@@ -185,7 +186,7 @@ export default function AlicePage() {
                         {/* Workbook Cover Preview */}
                         <div className="quest-card overflow-hidden slide-up relative group" style={{ animationDelay: "0.5s" }}>
                             <div className="w-full h-[180px] relative bg-black/80">
-                                <Image src="/assets/art_director_workbook_cover.png" alt="Manuale dell'Art Director" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
+                                <Image src={getAssetPath("/assets/art_director_workbook_cover.png")} alt="Manuale dell'Art Director" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--quest-card)] via-transparent to-transparent pointer-events-none" />
                             </div>
                             <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col items-center">
