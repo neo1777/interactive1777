@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, ReactNode } from "react";
+import NextImage from "next/image";
 
 interface DidacticTooltipProps {
     tips: string[];
@@ -84,9 +85,14 @@ export function ExamplePanel({ title, imageSrc, imageAlt, children }: ExamplePan
             </button>
             <div className={`transition-all duration-500 overflow-hidden ${isOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}`}>
                 <div className="px-4 pb-4">
-                    <div className="relative w-full rounded-xl border border-purple-500/20 bg-black/30 flex justify-center p-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={imageSrc} alt={imageAlt} className="max-w-full max-h-[400px] object-contain rounded drop-shadow-lg" />
+                    <div className="relative w-full rounded-xl border border-purple-500/20 bg-black/30 flex justify-center p-2 min-h-[100px]">
+                        <NextImage
+                            src={imageSrc}
+                            alt={imageAlt}
+                            width={800}
+                            height={400}
+                            className="max-w-full max-h-[400px] object-contain rounded drop-shadow-lg"
+                        />
                     </div>
                     {children && <div className="mt-3 text-sm text-purple-200 leading-relaxed drop-shadow">{children}</div>}
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import NextImage from "next/image";
 import { useEffect, useState } from "react";
 import { getStorageKey } from "@/lib/storage";
 import DidacticTooltip from "@/components/DidacticUI";
@@ -153,9 +154,14 @@ export default function GalleriaPage() {
                         {drawings.map((drawing) => (
                             <div key={drawing.id} className="quest-card overflow-hidden group flex flex-col bg-black/40 border-white/5 hover:border-purple-500/40 transition-all duration-300 shadow-2xl rounded-2xl">
                                 <div className="relative aspect-[4/3] bg-[#0d0818] border-b border-white/5 overflow-hidden">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={drawing.thumbnail} alt="Disegno salvato"
-                                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 p-4" />
+                                    <div className="relative w-full h-full p-4">
+                                        <NextImage
+                                            src={drawing.thumbnail}
+                                            alt="Disegno salvato"
+                                            fill
+                                            className="object-contain group-hover:scale-105 transition-transform duration-700 p-4"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="p-4 flex justify-between items-center bg-black/20">
                                     <div className="flex flex-col gap-0.5">
