@@ -154,7 +154,7 @@ export default function MappaPage() {
                     </div>
                     <div className="mission-badge mb-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🗺️ Missione 3</div>
                     <h1 className="text-3xl sm:text-4xl font-black text-white font-mono uppercase">La <span className="text-emerald-400">Mappa</span> del Mondo</h1>
-                    <p className="text-emerald-300/60 text-sm mt-1">L'Overworld principale di Isometric Quest</p>
+                    <p className="text-emerald-300/60 text-sm mt-1">L&apos;Overworld principale di Isometric Quest</p>
                 </div>
                 <Link href="/alice" className="btn-secondary text-sm shrink-0">⬅ Alice Hub</Link>
             </div>

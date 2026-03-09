@@ -157,6 +157,7 @@ Message: ${message}
                                     {/* Screenshot Preview */}
                                     <div className="relative aspect-video bg-black rounded-lg border border-white/10 overflow-hidden shadow-inner flex items-center justify-center group">
                                         {screenshot ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
                                             <img src={screenshot} alt="Preview" className="w-full h-full object-cover" />
                                         ) : (
                                             <Loader2 className="animate-spin text-emerald-500" />

@@ -104,8 +104,10 @@ export default function GiulianoMappePage() {
                         });
                         return { ...m, terrainData: newTerrain, width: MAPS[i].defaultSize, height: MAPS[i].defaultSize, grid: undefined };
                     }
+                    if (m.bgDataUrl === undefined) return { ...m, bgDataUrl: null };
                     return m;
                 });
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setMaps(migrated);
             } catch (e) { console.error(e); }
         }

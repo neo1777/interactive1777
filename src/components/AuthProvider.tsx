@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const stored = localStorage.getItem(CURRENT_KEY);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (stored) setUser(stored);
         setMounted(true);
     }, []);
@@ -189,8 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 key={v}
                                 onClick={() => { setView(v); setLoginError(""); setRegError(""); setRegSuccess(""); }}
                                 className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${view === v
-                                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
-                                        : "text-purple-400/60 hover:text-purple-300"
+                                    ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
+                                    : "text-purple-400/60 hover:text-purple-300"
                                     }`}
                             >
                                 {v === "login" ? "Accedi" : "Registrati"}

@@ -14,6 +14,7 @@ export default function Confetti({ show, duration = 3000 }: ConfettiProps) {
 
     useEffect(() => {
         if (show) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setVisible(true);
             const t = setTimeout(() => setVisible(false), duration);
             return () => clearTimeout(t);
