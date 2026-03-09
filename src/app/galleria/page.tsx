@@ -69,7 +69,7 @@ export default function GalleriaPage() {
             const saved = localStorage.getItem(getStorageKey("alice_gallery"));
             if (saved) {
                 const allStrokes = JSON.parse(saved);
-                const newAll = allStrokes.filter((d: any) => d.id !== id);
+                const newAll = allStrokes.filter((d: { id: string }) => d.id !== id);
                 localStorage.setItem(getStorageKey("alice_gallery"), JSON.stringify(newAll));
             }
         }

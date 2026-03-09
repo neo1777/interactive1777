@@ -94,7 +94,7 @@ export default function GiulianoMappePage() {
             try {
                 const parsed = JSON.parse(saved);
                 // Migrate old array-based grids to sparse objects if needed
-                const migrated = parsed.map((m: any, i: number) => {
+                const migrated = parsed.map((m: { grid?: number[][]; bgDataUrl?: string | null; terrainData?: Record<string, number> }, i: number) => {
                     if (Array.isArray(m.grid)) {
                         const newTerrain: Record<string, number> = {};
                         m.grid.forEach((row: number[], r: number) => {
