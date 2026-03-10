@@ -23,19 +23,41 @@ export default function FeedbackSystem() {
     const takeScreenshot = async () => {
         try {
             setStep("sending");
-            const canvas = await html2canvas(document.body, {
+            // Target the main scrollable area rather than the hidden body
+            const targetElement = document.querySelector("main") || document.body;
+            
+            const canvas = await html2canvas(targetElement, {
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: "#020617",
                 logging: false,
-                ignoreElements: (element) => element.id === "feedback-ui",
+                scale: 1, // Reduce scale to prevent memory issues on large pages
+                ignoreElements: (element) => element.id === "feedback-ui" || element.id === "didactic-portal",
             });
-            const imgData = canvas.toDataURL("image/jpeg", 0.7);
+            const imgData = canvas.toDataURL("image/jpeg", 0.6);
             setScreenshot(imgData);
             setStep("form");
         } catch (err) {
             console.error("Screenshot failed:", err);
-            setError("Impossibile scattare lo screenshot.");
+            setError("Impossibile catturare lo schermo. Puoi comunque inviare il messaggio.");
+            
+            // Generate a fallback dummy image so the user isn't blocked from submitting
+            const fallbackCanvas = document.createElement("canvas");
+            fallbackCanvas.width = 800;
+            fallbackCanvas.height = 450;
+            const ctx = fallbackCanvas.getContext("2d");
+            if (ctx) {
+                ctx.fillStyle = "#0f172a";
+                ctx.fillRect(0, 0, 800, 450);
+                ctx.fillStyle = "#10b981";
+                ctx.font = "bold 24px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("Screenshot Non Disponibile", 400, 225);
+                ctx.fillStyle = "#94a3b8";
+                ctx.font = "16px sans-serif";
+                ctx.fillText("Il tuo browser ha bloccato la cattura.", 400, 260);
+            }
+            setScreenshot(fallbackCanvas.toDataURL("image/jpeg", 0.8));
             setStep("form");
         }
     };
