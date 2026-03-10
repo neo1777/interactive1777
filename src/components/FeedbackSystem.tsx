@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { MessageSquare, X, Send, Camera, Loader2, Check } from "lucide-react";
-import html2canvas from "html2canvas";
+import * as htmlToImage from 'html-to-image';
 
 import { getSecureKey } from "@/lib/security";
 
@@ -26,15 +26,14 @@ export default function FeedbackSystem() {
             // Target the main scrollable area rather than the hidden body
             const targetElement = document.querySelector("main") || document.body;
             
-            const canvas = await html2canvas(targetElement, {
-                useCORS: true,
-                allowTaint: true,
+            const imgData = await htmlToImage.toJpeg(targetElement as HTMLElement, {
+                quality: 0.6,
                 backgroundColor: "#020617",
-                logging: false,
-                scale: 1, // Reduce scale to prevent memory issues on large pages
-                ignoreElements: (element) => element.id === "feedback-ui" || element.id === "didactic-portal",
+                filter: (node) => {
+                    const el = node as HTMLElement;
+                    return el?.id !== "feedback-ui" && el?.id !== "didactic-portal";
+                }
             });
-            const imgData = canvas.toDataURL("image/jpeg", 0.6);
             setScreenshot(imgData);
             setStep("form");
         } catch (err) {
