@@ -31,37 +31,26 @@ A vertical checklist for mission steps.
 
 ---
 
-## Mission Implementation
+## Implemented Missions
 
-Missions are defined within each role's dashboard or subpages:
+### 🧑‍🎨 Mission 1: I Personaggi (Alice)
+- **Goal**: Design the hero in 4 directions and create 3 enemy types.
+- **Components**: `StepGuide`, `DidacticTooltip`, `MiniCanvas` (multiple).
+- **Storage**: `iq_{user}_hero_front`, `iq_{user}_hero_back`, etc.
+- **Didactic Focus**: Character silhouettes, isometric perspectives, and scaling enemy difficulty.
 
-1. **Progress Tracking**:
-   - Status is persisted in `localStorage`.
-   - Use `getStorageKey("iq_mission_name")` to ensure cross-user isolation.
-   - Global progress is recalculated in `src/app/page.tsx` via `getProgressForRole`.
+### 📦 Mission 2: Gli Oggetti (Alice)
+- **Goal**: Create a set of item sprites (potions, swords, keys) with rarity.
+- **Components**: `DidacticTooltip`, `ExamplePanel`.
+- **Didactic Focus**: Loot design, standard game icons, and inventory management.
 
-2. **Integration Pattern**:
-   ```tsx
-   import { StepGuide } from "@/components/DidacticUI";
-   
-   const steps = [
-     { emoji: "✏️", title: "Sketch Hero", desc: "Draw in 4 directions", done: hasSavedHero },
-     // ...
-   ];
-   
-   <StepGuide steps={steps} />
-   ```
+### 🗺️ Mission 3: La Mappa (Giuliano)
+- **Goal**: Tile-based level design on an isometric grid.
+- **Components**: `GridCanvas`, `IsometricToggle`.
+- **Didactic Focus**: Tiling, grid systems, and Z-axis depth in 2D games.
 
 ---
 
-## Performance Monitoring Activity
-Located in `/giuliano/performance`, this special activity uses a real-time simulator to teach **Technical Art** and **Optimization**.
-- **Features**: Stress tester (Enemies/Particles), FPS/DrawCall monitoring, "Play" vs "Profile" modes.
-- **Technical Goal**: Demonstrate how asset complexity impacts game stability.
-
----
-
-## Style Guidelines for Activities
-- **Colors**: Match the role (Alice: Fuchsia, Emanuele: Teal/Blue, Giuliano: Emerald/Green).
-- **Animations**: Use `animate-bounce` for tooltips and `pop-in` for badges.
-- **Emojis**: Encouraged for readability and tone, consistent with the trẻ target audience.
+## Technical Maintenance
+- **LocalStorage Cleanup**: To reset progress, clear the `iq_{user}_` prefixed keys.
+- **Asset Updates**: AI-generated reference images should be placed in `/public/assets/` and linked via `getAssetPath()`.
