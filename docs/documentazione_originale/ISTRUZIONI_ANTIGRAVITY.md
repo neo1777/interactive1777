@@ -176,14 +176,15 @@ interface IntroSlideshowProps {
 }
 ```
 
-### 4.3 Comportamento UX
+### 4.3 Comportamento UX (Final Implementation)
 
-1. Al primo accesso: slideshow aperta di default, slide 1 visibile
-2. Navigazione: frecce sinistra/destra + punti paginazione cliccabili + swipe (opzionale)
-3. All'ultima slide: compare bottone "Ho capito, inizia le missioni! →" che collassa la slideshow e salva su localStorage
-4. Accessi successivi: slideshow collassata di default, bottone "Leggi intro →" visibile
-5. Progress bar in cima alla slideshow che indica slide X di N
-6. Transizione tra slide: fade-out / fade-in (150ms out + 150ms in), o slide laterale
+1. **First Visit**: Slideshow opens as an animated, glassmorphic banner at the top of the dashboard.
+2. **Native Fullscreen**: Clicking "Avvia Intro" triggers the browser's **Native Fullscreen API** for an immersive experience.
+3. **Auto-Play**: Slides advance automatically every 6 seconds.
+4. **Playback Controls**: A Play/Pause toggle allows users to stop the auto-advance.
+5. **Cinematic Transitions**: Use of `zoom-in-95`, `blur`, and radial-gradient backgrounds for a premium feel.
+6. **Persistence**: State is saved in `localStorage`. Once finished, the slideshow exits fullscreen and remain collapsed.
+7. **Accessibility**: Screen reader support and circular high-contrast navigation arrows.
 
 ### 4.4 Layout slide
 

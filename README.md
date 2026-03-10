@@ -4,6 +4,12 @@ A comprehensive web application designed as an interactive workbook and art-dire
 
 ## Features
 
+### 🚀 Immersive Onboarding
+- **Intro Slideshow**: A cinematic, native fullscreen presentation for every role (Alice, Emanuele, Giuliano) with auto-play, pause controls, and immersive animations.
+
+### 💬 Global Communication
+- **IsoQuest Com (Chat)**: Real-time communication system with **Telegram Synchronization**. Messages sent in the app reach the development team on Telegram, and vice versa.
+
 ### 🦸 Alice Hub (Art Director)
 - **Interactive Drawing Board**: Advanced canvas with brushes, colors, flood fill, and a smoothing assistant (`perfect-freehand`).
 - **Mission Progression**:
@@ -21,24 +27,32 @@ A comprehensive web application designed as an interactive workbook and art-dire
 ### 🗺️ Giuliano Hub (Level Designer)
 - **Map Editor**: Pan & Zoom enabled grid for designing complex levels.
 - **Isometric View**: Instant toggle between 2D Top-down and Isometric projections.
+- **Performance Monitor**: Mission 5 activity with a real-time simulator for Draw Calls, Triangles, and Memory profiling.
 - **Sparse Data Storage**: Optimized saving for large-scale world maps.
 
-### 🕹️ Mini-Games
+### 🕹️ Mini-Games & Didactic
+- **Activity System**: Gamified learning modules using `DidacticUI` components (tooltips, step guides, XP badges).
 - **Colora le Forme**: Flood-fill coloring game with an optimized BFS algorithm.
 - **Unisci i Puntini**: Logic-based connect-the-dots game.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
-- **UI & Styling**: React, Tailwind CSS, Lucide Icons
+- **React**: 19.x (Modern concurrent rendering)
+- **Styling**: Tailwind CSS 4 (Custom utility system)
+- **Icons**: Lucide Icons
 - **Canvas Math**: `perfect-freehand`
-- **Deployment**: GitHub Pages (via GitHub Actions)
-- **Data Persistence**: LocalStorage (Persistent across sessions)
-- **Multi-user Support**: Character/Role isolated storage keys.
+- **Deployment**: GitHub Pages (Static Export)
+- **Data Persistence**: LocalStorage (using `getStorageKey` for isolation)
+- **Security**: Base64 obfuscated keys via `getSecureKey` for public environment variables.
 
 ## Development
 
-First, run the development server:
+First, set up your environment variables (optional for Telegram chat):
+- `NEXT_PUBLIC_TELEGRAM_BOT_TOKEN`: The bot token.
+- `NEXT_PUBLIC_TELEGRAM_CHAT_ID`: The target chat ID.
+
+Then, run the development server:
 
 ```bash
 npm run dev
@@ -52,7 +66,4 @@ The project is optimized for **GitHub Pages**.
 - **Base Path**: `/interactive1777`
 - **Asset Handling**: Centralized `getAssetPath` utility for reliable loading on subdirectories.
 - **CI/CD**: Automatic build and deploy using GitHub Actions upon pushing to `main`.
-
-## Data Management
-
-The application records all drawing strokes (x, y, pressure) and allow exporting metadata to `.json` for external analysis or reconstruction in AI/ML pipelines.
+- **Static Export**: Requires `output: 'export'` in `next.config.ts`.
