@@ -7,10 +7,14 @@ import * as htmlToImage from 'html-to-image';
 import { getSecureKey } from "@/lib/security";
 
 // --- TELEGRAM CONFIG ---
-// We use environment variables to keep keys out of the source code.
-// On GH Pages (static), these are baked into the build JS.
-const TELEGRAM_BOT_TOKEN = getSecureKey(process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN);
-const TELEGRAM_CHAT_ID = getSecureKey(process.env.NEXT_PUBLIC_TELEGRAM_CHAT_ID);
+// We use environment variables normally, but for GitHub Actions static builds 
+// where .env.local is ignored, we fallback to obfuscated strings to prevent crashes.
+const TELEGRAM_BOT_TOKEN = getSecureKey(
+    process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN || "MFNhUGdDb0c1YnhmMkRWel9mVjBWR3EzOFNULVZUVUVFQUE6NzA2OTA4NDM3OA=="
+);
+const TELEGRAM_CHAT_ID = getSecureKey(
+    process.env.NEXT_PUBLIC_TELEGRAM_CHAT_ID || "NzI3MTg4NDc3"
+);
 
 export default function FeedbackSystem() {
     const [isOpen, setIsOpen] = useState(false);
