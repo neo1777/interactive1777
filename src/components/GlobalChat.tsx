@@ -168,7 +168,7 @@ export default function GlobalChat() {
     };
 
     return (
-        <div className="fixed bottom-6 left-6 z-[9998] flex items-end">
+        <div className="fixed bottom-20 md:bottom-6 left-6 z-[9998] flex items-end">
 
 
             {isOpen && (

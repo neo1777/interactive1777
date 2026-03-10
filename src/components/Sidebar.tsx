@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Paintbrush, Gamepad2, Map, Settings, LogOut, Hexagon, User } from "lucide-react";
+import { Home, Paintbrush, Gamepad2, Map, Settings, LogOut, Hexagon, User, MessageCircle } from "lucide-react";
 import Image from "next/image";
 
 const NAV_ITEMS = [
@@ -71,6 +71,16 @@ export default function Sidebar() {
                             </Link>
                         );
                     })}
+
+                    <div className="mt-8 text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-4 px-4">Supporto</div>
+                    <button
+                        onClick={() => window.dispatchEvent(new CustomEvent("open-isoquest-chat"))}
+                        className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden group border border-transparent text-indigo-400/60 hover:bg-indigo-500/10 hover:text-indigo-400 hover:border-indigo-500/20 cursor-pointer w-full text-left"
+                    >
+                        <MessageCircle className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                        <span className="font-black text-[11px] uppercase tracking-widest">Chat Live</span>
+                        <div className="ml-auto w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                    </button>
                 </nav>
 
                 {/* Bottom Profile Area */}
@@ -78,16 +88,16 @@ export default function Sidebar() {
                     {BOTTOM_ITEMS.map((item) => {
                         const Icon = item.icon;
                         return (
-                            <Link
+                            <button
                                 key={item.label}
-                                href={item.href}
-                                className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-white/40 hover:bg-white/5 hover:text-white group cursor-pointer"
+                                onClick={() => alert("Impostazioni in arrivo nelle prossime missioni!")}
+                                className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-white/40 hover:bg-white/5 hover:text-white group cursor-pointer w-full text-left"
                             >
                                 <Icon className="w-5 h-5 group-hover:text-white/60 transition-colors" />
                                 <span className="font-black text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-100">
                                     {item.label}
                                 </span>
-                            </Link>
+                            </button>
                         );
                     })}
 
@@ -115,17 +125,25 @@ export default function Sidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative ${active ? item.color : "text-gray-500"
+                            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative ${active ? item.color : "text-white/40"
                                 }`}
                         >
                             {active && (
                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-80" />
                             )}
                             <Icon className="w-5 h-5" />
-                            <span className="text-[10px] font-medium">{item.label}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-tighter">{item.label}</span>
                         </Link>
                     );
                 })}
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("open-isoquest-chat"))}
+                    className="flex flex-col items-center justify-center w-full h-full gap-1 transition-colors text-indigo-400 relative"
+                >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-tighter">Chat</span>
+                    <div className="absolute top-2 right-4 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse border border-black shadow-[0_0_5px_rgba(34,197,94,0.6)]"></div>
+                </button>
             </div>
         </>
     );
