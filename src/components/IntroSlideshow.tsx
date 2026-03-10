@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, X, Play } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ChevronLeft, ChevronRight, X, Play, Pause } from "lucide-react";
 import { getStorageKey } from "@/lib/storage";
 
 /* ─── Interfaces ─── */
@@ -790,10 +790,13 @@ export default function IntroSlideshow({
   themeColor 
 }: IntroSlideshowProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isCollapsed, setIsCollapsed] = useState(true); // Now controls the fullscreen overlay
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [isFading, setIsFading] = useState(false);
   const [alreadySeen, setAlreadySeen] = useState(true);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Persistence logic
   useEffect(() => {
@@ -804,14 +807,29 @@ export default function IntroSlideshow({
     });
   }, [storageKey]);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     setCurrentSlide(0);
     setIsCollapsed(false);
+    setIsAutoPlaying(true);
+    
+    // Attempt native fullscreen
+    if (containerRef.current) {
+      try {
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn("Fullscreen request failed:", err);
+      }
+    }
   };
 
   const handleToggle = () => setIsCollapsed(!isCollapsed);
 
   const handleFinish = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
     localStorage.setItem(getStorageKey(storageKey), "true");
     setAlreadySeen(true);
     setIsCollapsed(true);
@@ -820,14 +838,42 @@ export default function IntroSlideshow({
   const navigate = useCallback((direction: number) => {
     if (isFading) return;
     const nextIndex = currentSlide + direction;
+    
     if (nextIndex >= 0 && nextIndex < slides.length) {
       setIsFading(true);
       setTimeout(() => {
         setCurrentSlide(nextIndex);
         setIsFading(false);
       }, 150);
+    } else if (nextIndex >= slides.length) {
+      handleFinish(); // Auto-finish at the end of auto-play
     }
   }, [currentSlide, slides.length, isFading]);
+
+  // Auto-play logic
+  useEffect(() => {
+    if (!isCollapsed && isAutoPlaying && !isFading) {
+      autoPlayTimerRef.current = setInterval(() => {
+        navigate(1);
+      }, 6000); // 6 seconds per slide
+    } else {
+      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+    }
+    return () => {
+      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+    };
+  }, [isCollapsed, isAutoPlaying, isFading, navigate]);
+
+  // Handle exiting fullscreen via Esc key
+  useEffect(() => {
+    const handleFSChange = () => {
+      if (!document.fullscreenElement && !isCollapsed) {
+        setIsCollapsed(true);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFSChange);
+    return () => document.removeEventListener("fullscreenchange", handleFSChange);
+  }, [isCollapsed]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -902,7 +948,16 @@ export default function IntroSlideshow({
 
       {/* ─── Fullscreen Overlay ─── */}
       {!isCollapsed && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-500">
+        <div 
+          ref={containerRef}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black animate-in fade-in zoom-in-95 duration-700 ease-out overflow-hidden"
+          style={{ backgroundImage: 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)' }}
+        >
+          {/* Immersive Background Elements */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-${themeAccent}-500 to-transparent animate-pulse`} />
+            <div className={`absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-${themeAccent}-500 to-transparent animate-pulse`} />
+          </div>
           
           {/* Close Button */}
           <button 
@@ -915,15 +970,23 @@ export default function IntroSlideshow({
           {/* Centered Content Area */}
           <div className="w-full max-w-4xl max-h-[90vh] flex flex-col items-center">
             
-            <div className="w-full flex justify-center mb-8">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
-                <div className={`h-1.5 w-32 bg-slate-800 rounded-full overflow-hidden`}>
-                  <div className={`h-full bg-${themeAccent}-500 transition-all duration-300`} style={{ width: `${progress}%` }} />
+            <div className="w-full flex justify-center mb-8 gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+                <div className={`h-1 w-32 bg-slate-800 rounded-full overflow-hidden`}>
+                  <div className={`h-full bg-${themeAccent}-500 shadow-[0_0_8px_rgba(var(--${themeAccent}-rgb),0.8)] transition-all duration-300`} style={{ width: `${progress}%` }} />
                 </div>
-                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest min-w-[80px] text-right">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest min-w-[80px] text-right">
                   Slide {currentSlide + 1} / {slides.length}
                 </span>
               </div>
+              
+              <button 
+                onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                className={`p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/70`}
+                title={isAutoPlaying ? "Pausa automatico" : "Riprendi automatico"}
+              >
+                {isAutoPlaying ? <Pause size={14} /> : <Play size={14} fill="currentColor" />}
+              </button>
             </div>
 
             <div className={`w-full relative px-12 md:px-20 transition-opacity duration-150 ${isFading ? "opacity-0" : "opacity-100"}`}>
