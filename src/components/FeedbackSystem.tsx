@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { MessageSquare, X, Send, Camera, Loader2, Check } from "lucide-react";
 import * as htmlToImage from 'html-to-image';
-
 import { getSecureKey } from "@/lib/security";
+import { MessageSquare, X, Send, Camera, Loader2, Check } from "lucide-react";
 
-// --- TELEGRAM CONFIG ---
+import DrawingOverlay from "./ui/DrawingOverlay";
+
+// ... [existing imports]
 // We use environment variables normally, but for GitHub Actions static builds 
 // where .env.local is ignored, we fallback to obfuscated strings to prevent crashes.
 const TELEGRAM_BOT_TOKEN = getSecureKey(
@@ -18,7 +19,7 @@ const TELEGRAM_CHAT_ID = getSecureKey(
 
 export default function FeedbackSystem() {
     const [isOpen, setIsOpen] = useState(false);
-    const [step, setStep] = useState<"initial" | "form" | "sending" | "success">("initial");
+    const [step, setStep] = useState<"initial" | "drawing" | "form" | "sending" | "success">("initial");
     const [message, setMessage] = useState("");
     const [screenshot, setScreenshot] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -27,22 +28,17 @@ export default function FeedbackSystem() {
     const takeScreenshot = async () => {
         try {
             setStep("sending");
-            // Target the main scrollable area rather than the hidden body
             const targetElement = document.querySelector("main") || document.body;
             
             const imgData = await htmlToImage.toJpeg(targetElement as HTMLElement, {
                 quality: 0.6,
                 backgroundColor: "#020617",
-                skipFonts: true, // Crucial for ignoring Google Fonts CORS issues on GH Pages
-                imagePlaceholder: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", // Blank pixel for failed images
-                pixelRatio: 1, // Prevent huge resolution crashes on retina screens
-                fetchRequestInit: {
-                    cache: 'no-cache',
-                    credentials: 'omit'
-                },
+                skipFonts: true,
+                imagePlaceholder: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+                pixelRatio: 1, 
+                fetchRequestInit: { cache: 'no-cache', credentials: 'omit' },
                 filter: (node) => {
                     const el = node as HTMLElement;
-                    // Ignore anything that can crash the serialization
                     if (el?.tagName?.toLowerCase() === "canvas") return false;
                     if (el?.tagName?.toLowerCase() === "svg") return false;
                     if (el?.id === "feedback-ui" || el?.id === "didactic-portal") return false;
@@ -50,12 +46,11 @@ export default function FeedbackSystem() {
                 }
             });
             setScreenshot(imgData);
-            setStep("form");
+            setStep("drawing"); // Move to new drawing step instead of form
         } catch (err) {
             console.error("Screenshot failed:", err);
             setError("Impossibile catturare lo schermo. Puoi comunque inviare il messaggio.");
             
-            // Generate a fallback dummy image so the user isn't blocked from submitting
             const fallbackCanvas = document.createElement("canvas");
             fallbackCanvas.width = 800;
             fallbackCanvas.height = 450;
@@ -72,7 +67,7 @@ export default function FeedbackSystem() {
                 ctx.fillText("Il tuo browser ha bloccato la cattura.", 400, 260);
             }
             setScreenshot(fallbackCanvas.toDataURL("image/jpeg", 0.8));
-            setStep("form");
+            setStep("form"); // Skip drawing if screenshot failed completely
         }
     };
 
@@ -102,7 +97,6 @@ export default function FeedbackSystem() {
 📝 Messaggio: ${message}
       `;
 
-            // Convert Base64 to Blob
             const res = await fetch(screenshot!);
             const blob = await res.blob();
 
@@ -132,6 +126,11 @@ export default function FeedbackSystem() {
         }
     };
 
+    const handleDrawSave = (editedImageSrc: string) => {
+        setScreenshot(editedImageSrc);
+        setStep("form");
+    };
+
     return (
         <div id="feedback-ui" className="fixed bottom-6 right-6 z-[9999]">
             {/* Floating Button */}
@@ -153,7 +152,7 @@ export default function FeedbackSystem() {
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div
                         ref={modalRef}
-                        className="w-full max-w-md bg-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300"
+                        className={`w-full ${step === "drawing" ? "max-w-4xl max-h-[90vh]" : "max-w-md"} bg-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 transition-all`}
                     >
                         {/* Header */}
                         <div className="bg-emerald-900/40 p-4 border-b border-emerald-500/20 flex items-center justify-between">
@@ -172,7 +171,8 @@ export default function FeedbackSystem() {
                         </div>
 
                         {/* Content */}
-                        <div className="p-6 space-y-4">
+                        <div className={`p-6 space-y-4 ${step === "drawing" ? "relative aspect-video flex-1 p-0 m-0" : ""}`}>
+                            
                             {step === "sending" && (
                                 <div className="h-64 flex flex-col items-center justify-center gap-4 animate-pulse">
                                     <Loader2 size={48} className="text-emerald-500 animate-spin" />
@@ -190,10 +190,18 @@ export default function FeedbackSystem() {
                                 </div>
                             )}
 
+                            {step === "drawing" && screenshot && (
+                                <DrawingOverlay 
+                                    screenshotSrc={screenshot} 
+                                    onSave={handleDrawSave} 
+                                    onClear={() => setScreenshot(screenshot)} // Optional reset handler
+                                />
+                            )}
+
                             {step === "form" && (
                                 <>
                                     {/* Screenshot Preview */}
-                                    <div className="relative aspect-video bg-black rounded-lg border border-white/10 overflow-hidden shadow-inner flex items-center justify-center group">
+                                    <div className="relative aspect-video bg-black rounded-lg border border-white/10 overflow-hidden shadow-inner flex items-center justify-center group flex-shrink-0">
                                         {screenshot ? (
                                             /* eslint-disable-next-line @next/next/no-img-element */
                                             <img src={screenshot} alt="Preview" className="w-full h-full object-cover" />
@@ -201,7 +209,7 @@ export default function FeedbackSystem() {
                                             <Loader2 className="animate-spin text-emerald-500" />
                                         )}
                                         <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <span className="text-[10px] uppercase font-bold text-emerald-400 bg-black/80 px-2 py-1 rounded">Cattura istantanea</span>
+                                            <span className="text-[10px] uppercase font-bold text-emerald-400 bg-black/80 px-2 py-1 rounded">Immagine allegata</span>
                                         </div>
                                     </div>
 
@@ -211,7 +219,7 @@ export default function FeedbackSystem() {
                                         <textarea
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
-                                            placeholder="Cosa è successo? Qualche consiglio grafico o errore di gioco?"
+                                            placeholder="Cos'è successo? Se hai cerchiato qualcosa, dimmi perché!"
                                             className="w-full h-32 bg-black/40 border border-emerald-500/20 rounded-xl p-4 text-emerald-100 placeholder:text-emerald-900/60 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none font-fira-sans"
                                         />
                                     </div>
