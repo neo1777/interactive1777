@@ -8,14 +8,14 @@ import DidacticTooltip from "@/components/DidacticUI";
 const STAT_TIPS = [
     "Le <strong>stats base</strong> definiscono le capacità del personaggio al livello 1. Bilanciale bene!",
     "Un eroe con <strong>tutto al massimo è noioso</strong> — i migliori giochi hanno eroi con punti di forza E debolezze.",
-    "HP = Punti Vita, MP = Punti Magia, ATK = Attacco, DEF = Difesa, VEL = Velocità. Ogni stat cambia il gameplay!",
+    "HP = Punti Vita, MP = Punti Magia, ATK = Attacco, DEF = Difesa, VEL = Velocità.",
+    "<strong>Stamina (STM)</strong> per correre/schivare, <strong>Slot Inventario (SLOT)</strong> per decidere quante cose puoi portare!",
     "La <strong>tabella di crescita</strong> determina come il personaggio migliora con i livelli — è il cuore del bilanciamento!",
-    "Nei giochi RPG famosi, i <strong>test di bilanciamento</strong> durano mesi — ma tu puoi iniziare con valori semplici!",
 ];
 
-const STATS = ["HP", "MP", "ATK", "DEF", "VEL"] as const;
-const STAT_COLORS: Record<string, string> = { HP: "#ef4444", MP: "#3b82f6", ATK: "#f59e0b", DEF: "#10b981", VEL: "#a855f7" };
-const STAT_ICONS: Record<string, string> = { HP: "❤️", MP: "💧", ATK: "⚔️", DEF: "🛡️", VEL: "⚡" };
+const STATS = ["HP", "MP", "ATK", "DEF", "VEL", "STM", "SLOT"] as const;
+const STAT_COLORS: Record<string, string> = { HP: "#ef4444", MP: "#3b82f6", ATK: "#f59e0b", DEF: "#10b981", VEL: "#a855f7", STM: "#14b8a6", SLOT: "#fcd34d" };
+const STAT_ICONS: Record<string, string> = { HP: "❤️", MP: "💧", ATK: "⚔️", DEF: "🛡️", VEL: "⚡", STM: "🏃", SLOT: "🎒" };
 const MAX_STAT = 20;
 
 type LevelRow = { level: number; xp: number; hpBonus: number; atkBonus: number };
@@ -68,9 +68,10 @@ function RadarChart({ stats }: { stats: Record<string, number> }) {
 }
 
 export default function StatistichePage() {
-    const [stats, setStats] = useState<Record<string, number>>({ HP: 10, MP: 8, ATK: 7, DEF: 6, VEL: 9 });
+    const [stats, setStats] = useState<Record<string, number>>({ HP: 10, MP: 8, ATK: 7, DEF: 6, VEL: 9, STM: 15, SLOT: 5 });
     const [heroName, setHeroName] = useState("");
     const [levels, setLevels] = useState<LevelRow[]>(defaultLevels);
+    const [curveStyle, setCurveStyle] = useState<"linear" | "exponential">("linear");
 
     useEffect(() => {
         Promise.resolve().then(() => {
@@ -96,6 +97,24 @@ export default function StatistichePage() {
 
     const setLevel = (idx: number, field: keyof LevelRow, val: number) => {
         const nl = [...levels]; nl[idx] = { ...nl[idx], [field]: val }; setLevels(nl); save(stats, heroName, nl);
+    };
+
+    const applyCurve = (style: "linear" | "exponential") => {
+        setCurveStyle(style);
+        const newLevels = Array.from({ length: 10 }, (_, i) => {
+            let xp = 0;
+            if (i > 0) {
+                xp = style === "linear" ? i * 100 : Math.floor(100 * Math.pow(1.5, i));
+            }
+            return {
+                level: i + 1,
+                xp,
+                hpBonus: i * 5,
+                atkBonus: Math.floor(i * 1.5)
+            };
+        });
+        setLevels(newLevels);
+        save(stats, heroName, newLevels);
     };
 
     return (
@@ -152,7 +171,14 @@ export default function StatistichePage() {
 
                 {/* XP / Level Table */}
                 <div className="quest-card p-6">
-                    <h2 className="text-lg font-bold text-white mb-4">📈 Tabella Crescita XP/Livello</h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <h2 className="text-lg font-bold text-white">📈 Tabella Crescita XP/Livello</h2>
+                        <div className="flex gap-2 bg-black/40 p-1.5 rounded-xl border border-white/10">
+                            <button onClick={() => applyCurve("linear")} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${curveStyle === "linear" ? "bg-emerald-600 text-white shadow-lg" : "text-emerald-400 hover:bg-emerald-500/10"}`}>Lineare</button>
+                            <button onClick={() => applyCurve("exponential")} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${curveStyle === "exponential" ? "bg-amber-600 text-white shadow-lg" : "text-amber-400 hover:bg-amber-500/10"}`}>Esponenziale</button>
+                        </div>
+                    </div>
+                    
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>

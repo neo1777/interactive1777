@@ -8,14 +8,18 @@ import { getAssetPath } from "@/lib/utils";
 import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
-import { BarChart3, Ghost, ScrollText, MessageCircle, Headphones, Star, Settings } from "lucide-react";
+import { BarChart3, Ghost, ScrollText, MessageCircle, Headphones, Star, Settings, CalendarClock, Save, Users, Zap } from "lucide-react";
 
 const MISSIONS = [
-    { href: "/emanuele/statistiche", icon: BarChart3, label: "Statistiche", desc: "HP, MP, ATK, DEF, VEL — bilancia il tuo eroe!", storageKeys: ["iq_stats"], color: "text-emerald-400" },
-    { href: "/emanuele/nemici", icon: Ghost, label: "Nemici", desc: "Tipi, debolezze, drop table", storageKeys: ["iq_enemies_gd"], color: "text-emerald-400" },
-    { href: "/emanuele/quest", icon: ScrollText, label: "Quest", desc: "5 missioni con NPC e ricompense", storageKeys: ["iq_quests"], color: "text-emerald-400" },
-    { href: "/emanuele/dialoghi", icon: MessageCircle, label: "Dialoghi", desc: "Alberi di dialogo con scelte multiple", storageKeys: ["iq_dialogues"], color: "text-emerald-400" },
-    { href: "/emanuele/suoni", icon: Headphones, label: "Suoni", desc: "12 effetti sonori per il gioco", storageKeys: ["iq_sounds"], color: "text-emerald-400" },
+    { href: "/emanuele/statistiche", icon: BarChart3, label: "Statistiche", desc: "HP, MP, ATK, DEF, VEL e Level Up XP!", storageKeys: ["gd_stats", "gd_hero_name"], color: "text-emerald-400" },
+    { href: "/emanuele/nemici", icon: Ghost, label: "Nemici", desc: "Tipi, debolezze, status effects e drop", storageKeys: ["gd_enemies"], color: "text-emerald-400" },
+    { href: "/emanuele/quest", icon: ScrollText, label: "Quest", desc: "6 missioni con NPC e ricompense", storageKeys: ["gd_quests"], color: "text-emerald-400" },
+    { href: "/emanuele/dialoghi", icon: MessageCircle, label: "Dialoghi", desc: "Alberi di dialogo con scelte multiple", storageKeys: ["gd_dialogues"], color: "text-emerald-400" },
+    { href: "/emanuele/suoni", icon: Headphones, label: "Suoni", desc: "Registra suoni per ogni azione (18 totali)", storageKeys: ["gd_sounds"], color: "text-indigo-400" },
+    { href: "/emanuele/eventi", icon: CalendarClock, label: "Eventi di Gioco", desc: "Cosa succede quando...", storageKeys: ["gd_eventi_lista", "emanuele_eventi"], color: "text-purple-400" },
+    { href: "/emanuele/salvataggio", icon: Save, label: "Salvataggio", desc: "Progetta il save system", storageKeys: ["gd_salvataggio"], color: "text-blue-400" },
+    { href: "/emanuele/multiplayer", icon: Users, label: "Multiplayer", desc: "Co-op, PvP e Social Features", storageKeys: ["gd_multiplayer_modes", "emanuele_multiplayer"], color: "text-fuchsia-400" },
+    { href: "/emanuele/status-effects", icon: Zap, label: "Status Effects", desc: "Veleno, fuoco, gelo, benedizione...", storageKeys: ["gd_status_effects"], color: "text-rose-400" },
 ];
 
 const EXTRAS = [

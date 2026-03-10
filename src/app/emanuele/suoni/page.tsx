@@ -26,6 +26,12 @@ const SOUNDS = [
     { key: "wind", name: "wind.wav", emoji: "🌬️", how: "Soffia piano nel microfono (tieni distanza!)", when: "Suono ambiente esterno" },
     { key: "coins", name: "coins.wav", emoji: "🪙", how: "Scuoti delle monete in mano", when: "Ricevi oro / compra qualcosa" },
     { key: "levelup", name: "levelup.wav", emoji: "⬆️", how: "Suona una nota acuta (bicchiere o voce)", when: "Il personaggio sale di livello" },
+    { key: "game_over", name: "game_over.wav", emoji: "💀", how: "Qualcosa di lento e triste (voce o strumento)", when: "Game over" },
+    { key: "quest_done", name: "quest_done.wav", emoji: "🏆", how: "Qualcosa di vittorioso! Batti le mani, suona!", when: "Quest completata" },
+    { key: "status_poison", name: "status_poison.wav", emoji: "☠️", how: "Gorgoglio di acqua o suono di bolle", when: "Avvelenamento applicato" },
+    { key: "boss_appear", name: "boss_appear.wav", emoji: "🐉", how: "Qualcosa di epico e potente!", when: "Il boss appare" },
+    { key: "custom_1", name: "(inventa).wav", emoji: "🎵", how: "Inventa un suono originale!", when: "Quando vuoi tu!" },
+    { key: "custom_2", name: "(inventa).wav", emoji: "🎶", how: "Inventa un altro suono originale!", when: "Quando vuoi tu!" },
 ];
 
 export default function SuoniPage() {
@@ -95,7 +101,7 @@ export default function SuoniPage() {
                         </div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 tracking-widest uppercase mb-2">🎧 Missione 5</div>
                         <h1 className="text-3xl font-black text-white">Sound Design</h1>
-                        <p className="text-emerald-200/60 text-sm mt-1">Registra 12 effetti sonori direttamente dal browser!</p>
+                        <p className="text-emerald-200/60 text-sm mt-1">Registra 18 effetti sonori direttamente dal browser!</p>
                     </div>
                     <Link href="/emanuele" className="btn-secondary text-sm">⬅ Hub</Link>
                 </div>
@@ -106,9 +112,9 @@ export default function SuoniPage() {
 
                 <div className="text-center mb-6">
                     <div className="w-full max-w-md mx-auto h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
-                        <div className="progress-bar-emerald h-full" style={{ width: `${(recorded / 12) * 100}%` }} />
+                        <div className="progress-bar-emerald h-full" style={{ width: `${(recorded / 18) * 100}%` }} />
                     </div>
-                    <span className="text-xs text-emerald-300/60 mt-1">{recorded}/12 suoni registrati</span>
+                    <span className="text-xs text-emerald-300/60 mt-1">{recorded}/18 suoni registrati</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

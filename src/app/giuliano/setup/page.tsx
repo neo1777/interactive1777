@@ -15,18 +15,20 @@ const SETUP_TIPS = [
 ];
 
 const LAYERS = [
-    { name: "ground", type: "Tile Layer", desc: "Terreno base: erba, terra, sabbia, acqua", color: "#22c55e" },
+    { name: "ground", type: "Tile Layer", desc: "Terreno base: erba, terra, sabbia", color: "#22c55e" },
     { name: "terrain_detail", type: "Tile Layer", desc: "Variazioni: fiori, sassi, crepe", color: "#84cc16" },
+    { name: "water", type: "Tile Layer", desc: "Acqua: fiumi, laghi, cascate, mare", color: "#3b82f6" },
+    { name: "elevation", type: "Tile Layer", desc: "Zone a diverse altezze: colline, valli", color: "#06b6d4" },
     { name: "buildings", type: "Tile Layer", desc: "Strutture: muri, case, ponti, scale", color: "#f59e0b" },
     { name: "objects", type: "Object Layer", desc: "Oggetti interattivi: forzieri, segni, porte", color: "#3b82f6" },
     { name: "entities", type: "Object Layer", desc: "Spawn points: player, enemy, npc", color: "#a855f7" },
     { name: "collision", type: "Object Layer", desc: "Zone non attraversabili (invisibili)", color: "#ef4444" },
 ];
 
-type MapConfig = { orientation: string; tileWidth: number; tileHeight: number; mapWidth: number; mapHeight: number };
+type MapConfig = { orientation: string; tileWidth: number; tileHeight: number; mapWidth: number; mapHeight: number; cameraMode: string; showGrid: boolean };
 
 export default function SetupPage() {
-    const [config, setConfig] = useState<MapConfig>({ orientation: "Isometric", tileWidth: 64, tileHeight: 32, mapWidth: 30, mapHeight: 30 });
+    const [config, setConfig] = useState<MapConfig>({ orientation: "Isometric", tileWidth: 64, tileHeight: 32, mapWidth: 30, mapHeight: 30, cameraMode: "Follow Player (Smooth)", showGrid: true });
     const [activeLayers, setActiveLayers] = useState<string[]>(LAYERS.map(l => l.name));
 
     useEffect(() => {
@@ -113,6 +115,26 @@ export default function SetupPage() {
                                 <input type="number" className="quest-input mt-1" value={config.mapHeight} onChange={e => updateConfig({ mapHeight: +e.target.value })} />
                             </div>
                         </div>
+
+                        <div className="pt-4 border-t border-emerald-500/20">
+                            <h3 className="text-sm font-bold text-white mb-3">Opzioni Avanzate</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Modalità Camera</label>
+                                    <select className="quest-input mt-1 appearance-none bg-slate-900" value={config.cameraMode} onChange={e => updateConfig({ cameraMode: e.target.value })}>
+                                        <option>Follow Player (Smooth)</option>
+                                        <option>Follow Player (Rigid)</option>
+                                        <option>Fixed Room</option>
+                                    </select>
+                                </div>
+                                <div className="flex flex-col justify-end">
+                                    <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-white/5 hover:bg-white/5 transition-colors">
+                                        <input type="checkbox" className="w-4 h-4 accent-emerald-500" checked={config.showGrid} onChange={e => updateConfig({ showGrid: e.target.checked })} />
+                                        <span className="text-xs font-bold text-white uppercase tracking-wider">Mostra Griglia in Gioco</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Isometric Demo */}
@@ -131,6 +153,12 @@ export default function SetupPage() {
                                     fill={colors[(r + c) % 3]} stroke="#0f0a1e" strokeWidth={1} opacity={0.8} />;
                             }))}
                             <text x={100} y={125} textAnchor="middle" fill="#a7f3d0" fontSize={10} fontWeight={700}>64×32 — Rapporto 2:1</text>
+                            {config.showGrid && (
+                                <g opacity={0.3}>
+                                    <line x1={0} y1={70} x2={200} y2={70} stroke="#a7f3d0" strokeDasharray="2,2" />
+                                    <line x1={100} y1={0} x2={100} y2={140} stroke="#a7f3d0" strokeDasharray="2,2" />
+                                </g>
+                            )}
                         </svg>
                     </div>
                 </div>

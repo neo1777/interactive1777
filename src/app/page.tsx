@@ -25,41 +25,48 @@ function getProgressForRole(role: "alice" | "emanuele" | "giuliano"): { done: nu
   switch (role) {
     case "alice":
       return {
-        total: 6,
+        total: 7,
         done: [
-          has("iq_hero_front") || has("iq_hero"),
-          has("iq_enemy_easy") || has("iq_enemies"),
-          has("iq_friend_0") || has("iq_friends"),
-          has("iq_item_0") || has("iq_items"),
-          has("iq_map_grid"),
+          has("iq_hero") || has("iq_hero_front"),
+          has("iq_items") || has("iq_item_0"),
+          has("iq_alice_map_grid") || has("iq_alice_map_pois"),
           has("iq_emo_hero_happy") || has("iq_emo_npc_happy"),
+          has("alice_effetti") || has("alice_effetti_notes"),
+          has("alice_hud") || has("alice_hud_layout"),
+          has("alice_stati") || has("alice_stati_names"),
         ].filter(Boolean).length,
       };
     case "emanuele":
       return {
-        total: 5,
+        total: 9,
         done: [
-          has("iq_stats"),
-          has("iq_enemies_gd"),
-          has("iq_quests"),
-          has("iq_dialogues"),
-          has("iq_sounds"),
+          has("gd_stats") || has("gd_hero_name"),
+          has("gd_enemies"),
+          has("gd_quests"),
+          has("gd_dialogues"),
+          has("gd_sounds"),
+          has("gd_eventi_lista") || has("emanuele_eventi"),
+          has("gd_salvataggio") || has("emanuele_salvataggio"),
+          has("gd_multiplayer_modes") || has("emanuele_multiplayer"),
+          has("gd_status_effects"),
         ].filter(Boolean).length,
       };
     case "giuliano":
       return {
-        total: 4,
+        total: 6,
         done: [
-          has("ld_setup"),
+          has("ld_config") || has("ld_layers"),
           has("ld_maps"),
           has("ld_sprites"),
-          has("ld_bugs"),
+          has("ld_bugs") || has("ld_checks"),
+          has("ld_perf_checks"),
+          has("ld_procedurale"),
         ].filter(Boolean).length,
       };
   }
 }
 
-import { Paintbrush, Gamepad2, Map as MapIcon, Trophy, Sparkles } from "lucide-react";
+import { Paintbrush, Gamepad2, Map as MapIcon, Trophy, Sparkles, RotateCcw } from "lucide-react";
 
 const roles = [
   {
@@ -68,7 +75,7 @@ const roles = [
     icon: Paintbrush,
     name: "Alice",
     subtitle: "Art Director",
-    desc: "Disegna i personaggi, gli oggetti e la mappa del mondo!",
+    desc: "Personaggi, effetti visivi, HUD, status effects e molto altro!",
     gradient: "from-fuchsia-600/30 to-purple-700/30",
     border: "border-fuchsia-500/40",
     accent: "text-fuchsia-400",
@@ -81,7 +88,7 @@ const roles = [
     icon: Gamepad2,
     name: "Emanuele",
     subtitle: "Game Designer",
-    desc: "Progetta le statistiche, i nemici, le quest e i suoni!",
+    desc: "Statistiche, nemici, quest, eventi, salvataggio e multiplayer!",
     gradient: "from-teal-600/30 to-cyan-700/30",
     border: "border-teal-500/40",
     accent: "text-teal-400",
@@ -94,7 +101,7 @@ const roles = [
     icon: MapIcon,
     name: "Giuliano",
     subtitle: "Level Designer",
-    desc: "Costruisci le mappe, le tile e testa il gioco!",
+    desc: "Mappe, sprite, QA testing, performance e generazione procedurale!",
     gradient: "from-emerald-600/30 to-green-700/30",
     border: "border-emerald-500/40",
     accent: "text-emerald-400",
@@ -103,18 +110,40 @@ const roles = [
   },
 ];
 
+function RotateCcwIcon() { return <RotateCcw className="w-4 h-4" />; }
+
 export default function Home() {
   const [progress, setProgress] = useState<Record<string, { done: number; total: number }>>({});
+  const [resetConfirm, setResetConfirm] = useState(false);
+
+  const loadProgress = () => {
+    setProgress({
+      alice: getProgressForRole("alice"),
+      emanuele: getProgressForRole("emanuele"),
+      giuliano: getProgressForRole("giuliano"),
+    });
+  };
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      setProgress({
-        alice: getProgressForRole("alice"),
-        emanuele: getProgressForRole("emanuele"),
-        giuliano: getProgressForRole("giuliano"),
-      });
-    });
+    Promise.resolve().then(loadProgress);
   }, []);
+
+  const handleReset = () => {
+    if (!resetConfirm) { setResetConfirm(true); setTimeout(() => setResetConfirm(false), 3000); return; }
+    try {
+      const keysToDelete: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("iq_")) keysToDelete.push(k);
+        if (k && k.startsWith("gd_")) keysToDelete.push(k);
+        if (k && k.startsWith("ld_")) keysToDelete.push(k);
+        if (k && k.startsWith("alice_")) keysToDelete.push(k);
+      }
+      keysToDelete.forEach(k => localStorage.removeItem(k));
+    } catch { }
+    setResetConfirm(false);
+    Promise.resolve().then(loadProgress);
+  };
 
   const totalDone = Object.values(progress).reduce((s, p) => s + p.done, 0);
   const totalAll = Object.values(progress).reduce((s, p) => s + p.total, 0);
@@ -148,19 +177,35 @@ export default function Home() {
             </p>
 
             {/* Quick Stats Widget */}
-            <div className="flex items-center gap-6 bg-white/5 backdrop-blur-xl p-5 rounded-2xl border border-white/10 w-fit shadow-2xl">
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400 mb-1">Status Progetto</span>
-                <span className="text-white font-black text-2xl flex items-center gap-2 font-mono">
-                  <Trophy className="w-5 h-5 text-emerald-400" />
-                  {globalPct}%
-                </span>
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-center bg-white/5 backdrop-blur-xl p-5 rounded-2xl border border-white/10 w-fit shadow-2xl">
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400 mb-1">Status Progetto</span>
+                  <span className="text-white font-black text-2xl flex items-center gap-2 font-mono">
+                    <Trophy className="w-5 h-5 text-emerald-400" />
+                    {globalPct}%
+                  </span>
+                </div>
+                <div className="w-px h-10 bg-white/10" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-white/30 mb-1">Asset Totali</span>
+                  <span className="text-white font-black text-2xl font-mono">{totalDone} / {totalAll}</span>
+                </div>
               </div>
-              <div className="w-px h-10 bg-white/10" />
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-black tracking-widest text-white/30 mb-1">Asset Totali</span>
-                <span className="text-white font-black text-2xl font-mono">{totalDone} / {totalAll}</span>
-              </div>
+              
+              <div className="hidden sm:block w-px h-10 bg-white/10" />
+              
+              <button 
+                onClick={handleReset}
+                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition-all ${
+                  resetConfirm 
+                    ? "bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" 
+                    : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <RotateCcwIcon />
+                {resetConfirm ? "CONFERMA RESET" : "Reset Progress"}
+              </button>
             </div>
           </div>
         </div>

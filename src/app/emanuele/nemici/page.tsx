@@ -14,23 +14,26 @@ const ENEMY_DESIGN_TIPS = [
 ];
 
 const WEAKNESSES = ["Fuoco 🔥", "Ghiaccio ❄️", "Luce ✨", "Nessuna 🚫"];
-const BEHAVIORS = ["Aggressivo ⚔️", "Difensivo 🛡️", "Fuggitivo 🏃"];
+const BEHAVIORS = ["Aggressivo ⚔️", "Difensivo 🛡️", "Fuggitivo 🏃", "Tattico 🧠"];
+const STATUS_EFFECTS = ["Nessuno", "Veleno ☠️", "Fuoco 🔥", "Ghiaccio ❄️", "Paralisi ⚡"];
 const STAT_KEYS = ["HP", "ATK", "DEF", "VEL"] as const;
 const STAT_COLORS: Record<string, string> = { HP: "#ef4444", ATK: "#f59e0b", DEF: "#10b981", VEL: "#a855f7" };
 
 type EnemyData = {
     name: string; type: string; level: number;
     stats: Record<string, number>; drops: string;
-    weakness: string; behavior: string;
+    weakness: string; behavior: string; statusInflicted: string;
 };
 
 const defaults: EnemyData[] = [
-    { name: "", type: "Slime", level: 1, stats: { HP: 5, ATK: 3, DEF: 2, VEL: 4 }, drops: "", weakness: WEAKNESSES[0], behavior: BEHAVIORS[0] },
-    { name: "", type: "Goblin", level: 5, stats: { HP: 12, ATK: 8, DEF: 5, VEL: 6 }, drops: "", weakness: WEAKNESSES[1], behavior: BEHAVIORS[0] },
-    { name: "", type: "Boss", level: 10, stats: { HP: 50, ATK: 15, DEF: 12, VEL: 3 }, drops: "", weakness: WEAKNESSES[2], behavior: BEHAVIORS[1] },
+    { name: "", type: "Slime", level: 1, stats: { HP: 5, ATK: 3, DEF: 2, VEL: 4 }, drops: "", weakness: WEAKNESSES[0], behavior: BEHAVIORS[0], statusInflicted: STATUS_EFFECTS[0] },
+    { name: "", type: "Goblin", level: 5, stats: { HP: 12, ATK: 8, DEF: 5, VEL: 6 }, drops: "", weakness: WEAKNESSES[1], behavior: BEHAVIORS[0], statusInflicted: STATUS_EFFECTS[0] },
+    { name: "", type: "Boss", level: 10, stats: { HP: 50, ATK: 15, DEF: 12, VEL: 3 }, drops: "", weakness: WEAKNESSES[2], behavior: BEHAVIORS[1], statusInflicted: STATUS_EFFECTS[0] },
+    { name: "", type: "Bandito (Opzional)", level: 8, stats: { HP: 20, ATK: 12, DEF: 6, VEL: 10 }, drops: "", weakness: WEAKNESSES[3], behavior: BEHAVIORS[2], statusInflicted: STATUS_EFFECTS[0] },
+    { name: "", type: "Drago (Segreto)", level: 20, stats: { HP: 99, ATK: 30, DEF: 25, VEL: 15 }, drops: "", weakness: WEAKNESSES[1], behavior: BEHAVIORS[3], statusInflicted: STATUS_EFFECTS[2] },
 ];
 
-const DIFFICULTY = ["Facile 🟢", "Medio 🟡", "Boss 🔴"];
+const DIFFICULTY = ["Facile 🟢", "Medio 🟡", "Boss 🔴", "Extra 🟣", "Segreto 🌌"];
 
 export default function NemiciPage() {
     const [enemies, setEnemies] = useState<EnemyData[]>(defaults);
@@ -80,12 +83,12 @@ export default function NemiciPage() {
                 </div>
 
                 {/* Enemy tabs */}
-                <div className="builder-tabs mb-6">
+                <div className="builder-tabs mb-6 flex-wrap justify-center">
                     {enemies.map((en, i) => (
                         <button key={i} onClick={() => setActiveEnemy(i)}
                             className={`builder-tab ${activeEnemy === i ? "active" : ""}`}>
-                            <span>{["🟢", "🟡", "🔴"][i]}</span>
-                            <span className="tab-label">{DIFFICULTY[i]}</span>
+                            <span>{DIFFICULTY[i].split(" ")[1]}</span>
+                            <span className="tab-label">{DIFFICULTY[i].split(" ")[0]}</span>
                         </button>
                     ))}
                 </div>
@@ -145,6 +148,17 @@ export default function NemiciPage() {
                                 {BEHAVIORS.map(b => (
                                     <button key={b} onClick={() => update(activeEnemy, { behavior: b })}
                                         className={`type-chip ${e.behavior === b ? "active !border-emerald-500/50 !text-emerald-300" : ""}`}>{b}</button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Status Effects */}
+                        <div className="mt-4">
+                            <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider block mb-2">Status Inflitto</label>
+                            <div className="flex flex-wrap gap-2">
+                                {STATUS_EFFECTS.map(s => (
+                                    <button key={s} onClick={() => update(activeEnemy, { statusInflicted: s })}
+                                        className={`type-chip ${e.statusInflicted === s ? "active !border-emerald-500/50 !text-emerald-300" : ""}`}>{s}</button>
                                 ))}
                             </div>
                         </div>

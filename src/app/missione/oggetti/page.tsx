@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { getStorageKey } from "@/lib/storage";
 import DidacticTooltip, { ExamplePanel } from "@/components/DidacticUI";
+import { Star } from "lucide-react";
 
 const MiniCanvas = dynamic(() => import("@/components/MiniCanvas"), { ssr: false });
 
@@ -15,6 +16,12 @@ const ITEM_TYPES = [
     { id: "chiave", label: "🔑 Chiave" },
     { id: "altro", label: "✨ Altro" },
 ];
+
+type ArtifactData = {
+    name: string;
+    description: string;
+    power: string;
+};
 
 type GameItem = {
     name: string;
@@ -37,10 +44,21 @@ const ITEM_TIPS = [
 
 export default function OggettiPage() {
     const [items, setItems] = useState<GameItem[]>(defaultItems);
+    const [artifact, setArtifact] = useState<ArtifactData>({ name: "", description: "", power: "" });
 
-    useEffect(() => { Promise.resolve().then(() => { try { const s = localStorage.getItem(getStorageKey("iq_items")); if (s) setItems(JSON.parse(s)); } catch { } }); }, []);
+    useEffect(() => { 
+        Promise.resolve().then(() => { 
+            try { 
+                const s = localStorage.getItem(getStorageKey("iq_items")); 
+                if (s) setItems(JSON.parse(s)); 
+                const a = localStorage.getItem(getStorageKey("iq_artifact"));
+                if (a) setArtifact(JSON.parse(a));
+            } catch { } 
+        }); 
+    }, []);
 
     useEffect(() => { localStorage.setItem(getStorageKey("iq_items"), JSON.stringify(items)); }, [items]);
+    useEffect(() => { localStorage.setItem(getStorageKey("iq_artifact"), JSON.stringify(artifact)); }, [artifact]);
 
     const updateItem = (i: number, field: keyof GameItem, value: string | number) => {
         const copy = [...items];
@@ -125,6 +143,38 @@ export default function OggettiPage() {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Legendary Artifact */}
+            <div className="w-full max-w-7xl mt-8 slide-up" style={{ animationDelay: "0.2s" }}>
+                <h2 className="text-2xl font-black text-amber-400 mb-4 flex items-center gap-2">
+                    <Star className="w-6 h-6" />
+                    L&apos;Artefatto Leggendario
+                </h2>
+                <div className="quest-card p-6 border-amber-500/50 hover:border-amber-400 bg-amber-950/20 flex flex-col md:flex-row gap-6 items-center">
+                    <div className="shrink-0 flex flex-col items-center gap-2">
+                        <MiniCanvas storageKey="iq_artifact_canvas" width={256} height={256} className="border-amber-500/30" />
+                        <span className="text-xs text-amber-400/50 uppercase tracking-widest font-bold">Unico nel suo genere</span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-4 w-full">
+                        <div>
+                            <label className="text-sm font-bold text-amber-300 mb-1 block">Nome dell&apos;Artefatto</label>
+                            <input className="quest-input focus:border-amber-500/50 text-amber-100 placeholder:text-amber-500/30" placeholder="Es. L'Occhio di Aethelgard..."
+                                value={artifact.name} onChange={e => setArtifact({ ...artifact, name: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-amber-300 mb-1 block">Descrizione</label>
+                            <input className="quest-input focus:border-amber-500/50 text-amber-100 placeholder:text-amber-500/30" placeholder="Un antico amuleto perduto..."
+                                value={artifact.description} onChange={e => setArtifact({ ...artifact, description: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-amber-300 mb-1 block">Potere Speciale</label>
+                            <input className="quest-input focus:border-amber-500/50 text-amber-100 placeholder:text-amber-500/30" placeholder="Cosa succede quando l'eroe lo usa?"
+                                value={artifact.power} onChange={e => setArtifact({ ...artifact, power: e.target.value })} />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -36,6 +36,10 @@ export const getSecureKey = (key: string | undefined): string => {
     // If it looks like a Telegram token (contains ':'), it's plain text
     if (key.includes(":")) return key;
 
-    // Otherwise, treat as obfuscated
-    return deobfuscate(key);
+    // If it's a numeric Chat ID (could be negative), it's plain text
+    if (/^-?\d+$/.test(key)) return key;
+
+    // Otherwise, treat as obfuscated, fallback to original if it fails
+    const deobfuscated = deobfuscate(key);
+    return deobfuscated || key;
 };

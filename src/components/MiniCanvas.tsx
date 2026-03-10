@@ -32,9 +32,10 @@ interface MiniCanvasProps {
     height?: number;
     className?: string;
     withZoomPan?: boolean; // New prop to enable zoom/pan
+    grid?: number; // Add grid prop
 }
 
-export default function MiniCanvas({ storageKey, label, width = 300, height = 300, className = "", withZoomPan = false }: MiniCanvasProps) {
+export default function MiniCanvas({ storageKey, label, width = 300, height = 300, className = "", withZoomPan = false, grid }: MiniCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [strokes, setStrokes] = useState<MiniStroke[]>([]);
@@ -79,6 +80,22 @@ export default function MiniCanvas({ storageKey, label, width = 300, height = 30
         ctx.strokeStyle = "rgba(255,255,255,0.05)";
         ctx.lineWidth = 1;
         ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid if provided
+        if (grid) {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+            const stepX = width / grid;
+            const stepY = height / grid;
+            
+            for (let i = 0; i <= grid; i++) {
+                ctx.moveTo(i * stepX, 0);
+                ctx.lineTo(i * stepX, height);
+                ctx.moveTo(0, i * stepY);
+                ctx.lineTo(width, i * stepY);
+            }
+            ctx.stroke();
+        }
 
         ctx.restore();
 

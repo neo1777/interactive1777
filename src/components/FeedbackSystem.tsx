@@ -57,11 +57,13 @@ export default function FeedbackSystem() {
         setStep("sending");
 
         try {
+            const currentUser = localStorage.getItem("currentUser") || "Ospite";
             const metadata = `
---- FEEDBACK ---
-URL: ${window.location.href}
-User Agent: ${navigator.userAgent}
-Message: ${message}
+--- ISOQUEST FEEDBACK ---
+👤 Utente: ${currentUser}
+🌐 URL: ${window.location.href}
+💻 Device: ${navigator.userAgent.substring(0, 50)}...
+📝 Messaggio: ${message}
       `;
 
             // Convert Base64 to Blob

@@ -8,13 +8,16 @@ import { getAssetPath } from "@/lib/utils";
 import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
-import { User, Sword, Map, Smile, Image as ImageIcon, Star, BarChart2, Palette } from "lucide-react";
+import { User, Sword, Map, Smile, Image as ImageIcon, Star, Sparkles, LayoutPanelTop, Activity } from "lucide-react";
 
 const MISSIONS = [
     { href: "/missione/personaggi", icon: User, label: "Personaggi", desc: "Eroe, nemici, amici — disegnali tutti!", storageKeys: ["iq_hero_front", "iq_hero", "iq_enemy_easy", "iq_enemies", "iq_friend_0", "iq_friends"], color: "text-purple-400" },
-    { href: "/missione/oggetti", icon: Sword, label: "Oggetti", desc: "Spade, pozioni, armature magiche", storageKeys: ["iq_item_0", "iq_items"], color: "text-red-400" },
-    { href: "/missione/mappa", icon: Map, label: "Mappa", desc: "Disegna il mondo con la griglia isometrica", storageKeys: ["iq_map_grid"], color: "text-emerald-400" },
+    { href: "/missione/oggetti", icon: Sword, label: "Oggetti", desc: "Spade, pozioni, armature magiche e artefatti", storageKeys: ["iq_item_0", "iq_items"], color: "text-red-400" },
+    { href: "/missione/mappa", icon: Map, label: "Mappa", desc: "Disegna il mondo: zone e biomi", storageKeys: ["iq_alice_map_grid", "iq_alice_map_pois"], color: "text-emerald-400" },
     { href: "/missione/emozioni", icon: Smile, label: "Emozioni", desc: "Dai vita ai personaggi con espressioni", storageKeys: ["iq_emo_hero_happy", "iq_emo_npc_happy"], color: "text-yellow-400" },
+    { href: "/alice/effetti", icon: Sparkles, label: "Effetti Visivi", desc: "Acqua, nebbia, illuminazione, magia", storageKeys: ["alice_effetti"], color: "text-cyan-400" },
+    { href: "/alice/hud", icon: LayoutPanelTop, label: "HUD & Menu", desc: "Progetta l'interfaccia di gioco", storageKeys: ["alice_hud"], color: "text-fuchsia-400" },
+    { href: "/alice/stati", icon: Activity, label: "Status Effects", desc: "Veleno, fuoco, gelo: disegna gli stati", storageKeys: ["alice_stati"], color: "text-rose-400" },
 ];
 
 const EXTRAS = [

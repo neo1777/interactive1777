@@ -20,6 +20,11 @@ const DIRECTIONS = [
     { key: "left", label: "A Sinistra", emoji: "⬅️" },
 ];
 
+const HERO_STATES = [
+    { key: "hurt", label: "Ferito", emoji: "🤕" },
+    { key: "death", label: "Sconfitto", emoji: "💀" },
+];
+
 const ENEMIES = [
     { key: "easy", label: "Nemico 1 — Facile", hint: "tipo: slime, topolino, folletto...", emoji: "👾", color: "text-green-400" },
     { key: "medium", label: "Nemico 2 — Medio", hint: "tipo: goblin, scheletro, lupo...", emoji: "💀", color: "text-yellow-400" },
@@ -30,15 +35,13 @@ const HERO_TIPS = [
     "Inizia disegnando il tuo eroe <strong>di fronte</strong> — è la vista più importante nel gioco!",
     "Il tuo eroe può essere un <strong>cavaliere</strong>, un <strong>mago</strong>, un <strong>esploratore</strong>... o qualcosa di completamente inventato!",
     "Nei giochi, ogni personaggio ha una <strong>silhouette unica</strong> — prova a renderlo riconoscibile anche da lontano.",
-    "I colori sono importanti: l'eroe di solito ha colori <strong>luminosi e caldi</strong> per distinguersi dai nemici.",
-    "Non servono dettagli perfetti! Anche i giochi famosi hanno iniziato con disegni <strong>semplici</strong>.",
+    "Non dimenticare le animazioni di base: come appare quando viene <strong>colpito</strong> o <strong>sconfitto</strong>?",
 ];
 
 const ENEMY_TIPS = [
     "I nemici facili dovrebbero essere <strong>piccoli e semplici</strong> — aiutano il giocatore a imparare le meccaniche!",
     "La <strong>scala di forza</strong> (1-10) è la base del bilanciamento: determina quanti colpi servono per vincer.",
-    "Il <strong>Boss finale</strong> deve essere epico! Rendilo grande, spaventoso e memorabile.",
-    "Pensa alla <strong>progressione</strong>: nemico facile → medio → boss. Come nei veri giochi!",
+    "Il <strong>Boss finale</strong> deve essere epico! Usa tutto lo spazio (64x64) per renderlo spaventoso e memorabile.",
 ];
 
 const FRIEND_TIPS = [
@@ -146,6 +149,12 @@ export default function PersonaggiPage() {
                                     <MiniCanvas storageKey={`iq_hero_${d.key}`} label={d.label} width={200} height={220} />
                                 </div>
                             ))}
+                            {HERO_STATES.map(state => (
+                                <div key={state.key} className="quest-card p-3 flex flex-col items-center gap-2 border-orange-500/30">
+                                    <span className="text-2xl">{state.emoji}</span>
+                                    <MiniCanvas storageKey={`iq_hero_${state.key}`} label={state.label} width={200} height={220} />
+                                </div>
+                            ))}
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -182,7 +191,7 @@ export default function PersonaggiPage() {
                                 <div key={en.key} className="quest-card p-4 flex flex-col items-center gap-3">
                                     <h3 className={`text-lg font-bold ${en.color}`}>{en.emoji} {en.label}</h3>
                                     <p className="text-emerald-400/50 text-xs text-center">{en.hint}</p>
-                                    <MiniCanvas storageKey={`iq_enemy_${en.key}`} width={220} height={220} />
+                                    <MiniCanvas storageKey={`iq_enemy_${en.key}`} width={en.key === "boss" ? 300 : 220} height={en.key === "boss" ? 300 : 220} grid={en.key === "boss" ? 64 : 32} />
                                     <input className="quest-input text-sm focus:border-emerald-500/50" placeholder="Nome del nemico..."
                                         value={enemies[i].name}
                                         onChange={e => {

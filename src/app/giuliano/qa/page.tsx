@@ -28,6 +28,23 @@ const TEST_CHECKS = [
     "I suoni si sentono al momento giusto?",
     "Il testo è leggibile e senza errori?",
     "Su mobile: funziona sia in portrait che landscape?",
+    "Le collisioni funzionano: il player non attraversa muri?",
+    "Il salvataggio/caricamento preserva tutto lo stato?",
+    "L'inventario non perde oggetti durante le transizioni?",
+    "Input tastiera E gamepad rispondono correttamente?",
+    "La UI si adatta a diverse risoluzioni (720p, 1080p, 4K)?",
+];
+
+const PERFORMANCE_METRICS = [
+    "60 FPS stabili durante il gameplay normale",
+    "Nessun calo di frame durante lo spawn di nemici",
+    "Caricamento scena < 2 secondi",
+    "Uso memoria RAM < 500MB",
+    "Nessun memory leak dopo 30 min di gioco",
+    "Test su dispositivo low-end (2GB RAM)",
+    "Test su dispositivo mid-range (4GB RAM)",
+    "Test con 20+ nemici sullo schermo",
+    "Stress-test: mappa full-size con tutti i POI attivi",
 ];
 
 type BugReport = { id: number; severity: number; where: string; steps: string; expected: string; actual: string; timestamp: string };
@@ -35,6 +52,7 @@ type BugReport = { id: number; severity: number; where: string; steps: string; e
 export default function QAPage() {
     const [bugs, setBugs] = useState<BugReport[]>([]);
     const [checklist, setChecklist] = useState<boolean[]>(Array(TEST_CHECKS.length).fill(false));
+    const [perfChecklist, setPerfChecklist] = useState<boolean[]>(Array(PERFORMANCE_METRICS.length).fill(false));
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState<Omit<BugReport, "id" | "timestamp">>({ severity: 2, where: "", steps: "", expected: "", actual: "" });
 
@@ -43,6 +61,7 @@ export default function QAPage() {
             try {
                 const s = localStorage.getItem(getStorageKey("ld_bugs")); if (s) setBugs(JSON.parse(s));
                 const c = localStorage.getItem(getStorageKey("ld_checks")); if (c) setChecklist(JSON.parse(c));
+                const p = localStorage.getItem(getStorageKey("ld_perf_checks")); if (p) setPerfChecklist(JSON.parse(p));
             } catch { }
         });
     }, []);
@@ -62,6 +81,11 @@ export default function QAPage() {
     const toggleCheck = (idx: number) => {
         const nc = [...checklist]; nc[idx] = !nc[idx]; setChecklist(nc);
         localStorage.setItem(getStorageKey("ld_checks"), JSON.stringify(nc));
+    };
+
+    const togglePerfCheck = (idx: number) => {
+        const nc = [...perfChecklist]; nc[idx] = !nc[idx]; setPerfChecklist(nc);
+        localStorage.setItem(getStorageKey("ld_perf_checks"), JSON.stringify(nc));
     };
 
     const severityCounts = SEVERITY.map((_, i) => bugs.filter(b => b.severity === i).length);
@@ -188,6 +212,23 @@ export default function QAPage() {
                             ))}
                         </div>
                         <div className="mt-3 text-center text-xs text-emerald-400 font-bold">{checklist.filter(Boolean).length}/{TEST_CHECKS.length}</div>
+                    </div>
+
+                    {/* Performance Metrics */}
+                    <div className="quest-card p-5 h-fit sticky top-[480px]">
+                        <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">⏱️ Metriche Performance</h3>
+                        <div className="space-y-2">
+                            {PERFORMANCE_METRICS.map((ch, i) => (
+                                <button key={i} onClick={() => togglePerfCheck(i)}
+                                    className={`w-full text-left flex items-start gap-2 p-2 rounded-lg text-xs transition-all ${perfChecklist[i]
+                                        ? "bg-blue-500/10 text-blue-300"
+                                        : "bg-white/5 text-blue-100/30 hover:border-white/10"}`}>
+                                    <span className="flex-shrink-0 mt-0.5">{perfChecklist[i] ? "✅" : "⬜"}</span>
+                                    <span>{ch}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="mt-3 text-center text-xs text-blue-400 font-bold">{perfChecklist.filter(Boolean).length}/{PERFORMANCE_METRICS.length}</div>
                     </div>
                 </div>
             </div>

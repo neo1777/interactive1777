@@ -23,9 +23,14 @@ const SPRITES_LIST = [
     { key: "hero_walk_up", name: "Eroe — walk up", size: 32, frames: 4, desc: "Camminata verso l'alto" },
     { key: "hero_walk_left", name: "Eroe — walk left", size: 32, frames: 4, desc: "Walk right = flip orizzontale" },
     { key: "hero_attack", name: "Eroe — attack", size: 32, frames: 3, desc: "Animazione attacco" },
+    { key: "hero_hurt", name: "Eroe — hurt", size: 32, frames: 2, desc: "Quando viene colpito" },
+    { key: "hero_death", name: "Eroe — death", size: 32, frames: 3, desc: "Animazione sconfitta" },
     { key: "enemy_easy", name: "Nemico 1 (slime)", size: 32, frames: 2, desc: "Idle con bounce" },
     { key: "enemy_med", name: "Nemico 2 (goblin)", size: 32, frames: 2, desc: "Idle + walk opzionale" },
     { key: "boss", name: "Boss", size: 64, frames: 4, desc: "Più grande degli altri!" },
+    { key: "npc_1", name: "NPC 1 (saggio)", size: 32, frames: 2, desc: "Il vecchio saggio del villaggio" },
+    { key: "npc_2", name: "NPC 2 (mercante)", size: 32, frames: 2, desc: "Il negoziante" },
+    { key: "npc_3", name: "NPC 3 (guardia)", size: 32, frames: 2, desc: "La guardia del villaggio" },
     { key: "tile_grass", name: "Tile erba", size: 32, frames: 1, desc: "Isometrico, rombo 64×32" },
     { key: "tile_dirt", name: "Tile terra", size: 32, frames: 1, desc: "Variazione colore dall'erba" },
     { key: "tile_water", name: "Tile acqua", size: 32, frames: 2, desc: "Animazione onda opzionale" },
@@ -39,12 +44,14 @@ export default function SpritesPage() {
     const [tool, setTool] = useState<"pencil" | "eraser">("pencil");
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [grids, setGrids] = useState<Record<string, string>>({});
+    const [animSettings, setAnimSettings] = useState<Record<string, { speed: number; loop: boolean }>>({});
     const gridSize = 32;
     const pixelSize = Math.min(16, Math.floor(400 / gridSize));
 
-    useEffect(() => { Promise.resolve().then(() => { try { const s = localStorage.getItem(getStorageKey("ld_sprites")); if (s) setGrids(JSON.parse(s)); } catch { } }); }, []);
+    useEffect(() => { Promise.resolve().then(() => { try { const s = localStorage.getItem(getStorageKey("ld_sprites")); if (s) setGrids(JSON.parse(s)); const a = localStorage.getItem(getStorageKey("ld_sprites_anim")); if (a) setAnimSettings(JSON.parse(a)); } catch { } }); }, []);
 
     const save = useCallback((g: Record<string, string>) => localStorage.setItem(getStorageKey("ld_sprites"), JSON.stringify(g)), []);
+    const saveAnim = useCallback((a: Record<string, { speed: number; loop: boolean }>) => { localStorage.setItem(getStorageKey("ld_sprites_anim"), JSON.stringify(a)); setAnimSettings(a); }, []);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -90,6 +97,14 @@ export default function SpritesPage() {
     };
 
     const isDown = useRef(false);
+
+    const activeData = SPRITES_LIST[activeSprite];
+    const currentAnim = animSettings[activeData.key] || { speed: 8, loop: true };
+
+    const updateAnim = (partial: Partial<{ speed: number; loop: boolean }>) => {
+        const newData = { ...currentAnim, ...partial };
+        saveAnim({ ...animSettings, [activeData.key]: newData });
+    };
 
     const completed = Object.keys(grids).length;
 
@@ -152,8 +167,8 @@ export default function SpritesPage() {
                     {/* Canvas */}
                     <div className="quest-card p-5">
                         <div className="flex items-center justify-between mb-5 border-b border-white/5 pb-4">
-                            <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.2em] font-mono">{SPRITES_LIST[activeSprite].name}</h3>
-                            <span className="text-[10px] font-bold text-emerald-400/40 border border-emerald-400/10 px-3 py-1 rounded-full font-mono uppercase tracking-widest">{SPRITES_LIST[activeSprite].desc}</span>
+                            <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.2em] font-mono">{activeData.name}</h3>
+                            <span className="text-[10px] font-bold text-emerald-400/40 border border-emerald-400/10 px-3 py-1 rounded-full font-mono uppercase tracking-widest">{activeData.desc}</span>
                         </div>
 
                         {/* Toolbar */}
@@ -183,6 +198,30 @@ export default function SpritesPage() {
                                 onMouseUp={() => { isDown.current = false; }}
                                 onMouseLeave={() => { isDown.current = false; }} />
                         </div>
+
+                        {activeData.frames > 1 && (
+                            <div className="mt-6 p-5 border border-white/5 rounded-2xl bg-black/20 flex flex-col gap-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3" />
+                                    Impostazioni Animazione ({activeData.frames} Frames)
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-xs text-white/50 uppercase tracking-widest font-bold mb-4 block flex justify-between">
+                                            <span>Velocità (FPS)</span>
+                                            <span className="text-emerald-400">{currentAnim.speed}</span>
+                                        </label>
+                                        <input type="range" min="1" max="60" value={currentAnim.speed} onChange={(e) => updateAnim({ speed: parseInt(e.target.value) })} className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-black focus:outline-none" style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${(currentAnim.speed / 60) * 100}%, rgba(255,255,255,0.1) ${(currentAnim.speed / 60) * 100}%, rgba(255,255,255,0.1) 100%)` }} />
+                                    </div>
+                                    <div className="flex items-center sm:justify-end">
+                                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5 hover:border-white/10">
+                                            <input type="checkbox" checked={currentAnim.loop} onChange={(e) => updateAnim({ loop: e.target.checked })} className="accent-emerald-500 w-4 h-4" />
+                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Ripeti In Loop</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex justify-center gap-2 mt-6">
                             <button onClick={() => {

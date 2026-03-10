@@ -8,13 +8,15 @@ import { getAssetPath } from "@/lib/utils";
 import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
-import { Settings2, Layers, PencilLine, Bug, Star, Map as MapIcon } from "lucide-react";
+import { Settings2, Layers, PencilLine, Bug, Star, Map as MapIcon, Gauge, Dice5 } from "lucide-react";
 
 const MISSIONS = [
-    { href: "/giuliano/setup", icon: Settings2, label: "Setup Mappa", desc: "Configurazione tile, layer e camera", storageKeys: ["ld_setup"], color: "text-emerald-400" },
-    { href: "/giuliano/mappe", icon: Layers, label: "Le 3 Mappe", desc: "Villaggio, foresta, dungeon", storageKeys: ["ld_maps"], color: "text-emerald-400" },
-    { href: "/giuliano/sprites", icon: PencilLine, label: "Pixel Art", desc: "Sprite sheet con Piskel / Aseprite", storageKeys: ["ld_sprites"], color: "text-emerald-400" },
-    { href: "/giuliano/qa", icon: Bug, label: "QA Testing", desc: "Bug report e test checklist", storageKeys: ["ld_bugs", "ld_checks"], color: "text-emerald-400" },
+    { href: "/giuliano/setup", icon: Settings2, label: "Setup Mappa", desc: "Elevation, layer (8) e camera", storageKeys: ["ld_config", "ld_layers"], color: "text-emerald-400" },
+    { href: "/giuliano/mappe", icon: Layers, label: "Le 4 Mappe", desc: "4 mappe con layer elevation", storageKeys: ["ld_maps"], color: "text-emerald-400" },
+    { href: "/giuliano/sprites", icon: PencilLine, label: "Pixel Art", desc: "20 sprites con animazioni", storageKeys: ["ld_sprites"], color: "text-emerald-400" },
+    { href: "/giuliano/qa", icon: Bug, label: "QA Testing", desc: "Bug report e test checklist (12 items)", storageKeys: ["ld_bugs", "ld_checks", "ld_perf_checks"], color: "text-emerald-400" },
+    { href: "/giuliano/performance", icon: Gauge, label: "Performance", desc: "FPS, battery & device testing", storageKeys: ["ld_perf_checks"], color: "text-blue-400" },
+    { href: "/giuliano/procedurale", icon: Dice5, label: "Generazione", desc: "Seed e regole procedurali", storageKeys: ["ld_procedurale"], color: "text-fuchsia-400" },
 ];
 
 const EXTRAS = [

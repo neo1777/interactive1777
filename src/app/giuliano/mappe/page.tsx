@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getStorageKey } from "@/lib/storage";
 import DidacticTooltip from "@/components/DidacticUI";
-import { Layout, Map as MapIcon, Navigation, CheckCircle2, Circle, ArrowLeft, Paintbrush, MapPin, Trees, Home, Castle, ZoomIn, ZoomOut, Move, Settings2, Trash2 } from "lucide-react";
+import { Layout, Map as MapIcon, Navigation, CheckCircle2, Circle, ArrowLeft, Paintbrush, MapPin, Trees, Home, Castle, ZoomIn, ZoomOut, Move, Settings2, Trash2, Layers } from "lucide-react";
 
 // Tips
 const MAP_BUILD_TIPS = [
@@ -19,6 +19,7 @@ const MAPS = [
     { key: "village", name: "Villaggio", icon: Home, defaultSize: 30, file: "village_01.tmx", checks: ["Player spawn point al centro/basso", "Almeno 3 NPC (saggio, negoziante, guardia)", "Sentiero chiaro verso l'uscita", "Negozio / forziere tutorial", "Collision su muri e bordi"] },
     { key: "forest", name: "Foresta", icon: Trees, defaultSize: 40, file: "forest_01.tmx", checks: ["Ingresso collegato al villaggio", "3-5 enemy spawn points", "Almeno un forziere nascosto", "Sentiero verso il dungeon", "Variazione terreno: alberi, cespugli, radure"] },
     { key: "dungeon", name: "Dungeon", icon: Castle, defaultSize: 25, file: "dungeon_01.tmx", checks: ["Ingresso dalla foresta", "Corridoi stretti e stanze", "1 boss spawn nella stanza finale", "Forzieri con loot prima del boss", "Collision ovunque (muri grotta)"] },
+    { key: "bonus", name: "Bonus", icon: Navigation, defaultSize: 20, file: "bonus_01.tmx", checks: ["Ingresso segreto/nascosto", "Tesori rari e oggetti unici", "Nemici opzionali extra-forte", "Terreno unico (neve, lava, cristalli)", "Boss segreto opzionale"] },
 ];
 
 const TERRAINS = [
@@ -60,6 +61,7 @@ type MapData = {
     height: number;
     // We use a sparse object mapping "r,c" to terrain ID representing edits to save Space. Default is 0 (Grass)
     terrainData: Record<string, number>;
+    elevationData?: Record<string, number>;
     pois: { r: number; c: number; id: number }[];
     checklist: boolean[];
 };
@@ -71,15 +73,17 @@ export default function GiulianoMappePage() {
             width: m.defaultSize,
             height: m.defaultSize,
             terrainData: {},
+            elevationData: {},
             pois: [],
             checklist: Array(m.checks.length).fill(false)
         }))
     );
 
     // Tools
-    const [tool, setTool] = useState<"paint" | "poi" | "pan">("paint");
+    const [tool, setTool] = useState<"paint" | "poi" | "pan" | "elevation">("paint");
     const [terrain, setTerrain] = useState(0);
     const [poiId, setPoiId] = useState(100);
+    const [elevationLevel, setElevationLevel] = useState(1);
 
     // Viewport
     const [zoom, setZoom] = useState(1);
@@ -140,6 +144,11 @@ export default function GiulianoMappePage() {
             } else {
                 nm[activeMap].pois.push({ r, c, id: poiId });
             }
+        } else if (tool === "elevation") {
+            const ne = { ...(nm[activeMap].elevationData || {}) };
+            if (elevationLevel === 0) delete ne[`${r},${c}`];
+            else ne[`${r},${c}`] = elevationLevel;
+            nm[activeMap] = { ...nm[activeMap], elevationData: ne };
         }
         setMaps(nm);
         save(nm);
@@ -269,6 +278,9 @@ export default function GiulianoMappePage() {
                                 <button onClick={() => setTool("poi")} className={`p-2 px-3 rounded-lg transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${tool === "poi" ? "bg-amber-600 text-white" : "text-white/50 hover:bg-white/10"}`}>
                                     <MapPin className="w-4 h-4" /> POI
                                 </button>
+                                <button onClick={() => setTool("elevation")} className={`p-2 px-3 rounded-lg transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${tool === "elevation" ? "bg-purple-600 text-white" : "text-white/50 hover:bg-white/10"}`}>
+                                    <Layers className="w-4 h-4" /> Livello
+                                </button>
                                 <div className="w-px bg-white/10 mx-1" />
                                 <button onClick={() => setTool("pan")} className={`p-2 px-3 rounded-lg transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${tool === "pan" ? "bg-blue-600 text-white" : "text-white/50 hover:bg-white/10"}`}>
                                     <Move className="w-4 h-4" /> Muovi
@@ -319,6 +331,14 @@ export default function GiulianoMappePage() {
                                         </div>
                                     ))}
                                 </div>
+                            ) : tool === "elevation" ? (
+                                <div className="flex gap-2">
+                                    {[0, 1, 2].map(lvl => (
+                                        <button key={lvl} onClick={() => setElevationLevel(lvl)} className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all w-24 h-12 ${elevationLevel === lvl ? 'bg-purple-500/20 border-2 border-purple-500' : 'bg-black/40 border-2 border-transparent hover:bg-white/10'}`}>
+                                            <span className="text-[10px] font-bold text-white tracking-widest uppercase">{lvl === 0 ? "Terreno (0)" : lvl === 1 ? "Collina (+1)" : "Ponte (+2)"}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="w-full text-center text-sm text-white/40 italic flex items-center justify-center gap-2">
                                     <Move className="w-4 h-4" /> Trascina il mouse per spostare la mappa
@@ -362,6 +382,9 @@ export default function GiulianoMappePage() {
                                             const terrainId = currentMap.terrainData[id] || 0;
                                             const poiData = currentMap.pois.find(p => p.r === r && p.c === c);
                                             const poiObj = poiData ? FLAT_POIS.find(f => f.id === poiData.id) : null;
+                                            const elevation = (currentMap.elevationData && currentMap.elevationData[id]) || 0;
+                                            const zOffset = isIsometric ? elevation * -15 : 0;
+                                            const shadow = isIsometric && elevation > 0 ? `0 ${elevation * 5}px 0 rgba(0,0,0,0.5)` : 'none';
 
                                             return (
                                                 <div
@@ -369,6 +392,10 @@ export default function GiulianoMappePage() {
                                                     className="border-[0.5px] border-black/10 relative overflow-hidden pointer-events-auto"
                                                     style={{
                                                         backgroundColor: TERRAINS.find(t => t.id === terrainId)?.color || "#000",
+                                                        transform: `translateY(${zOffset}px)`,
+                                                        boxShadow: shadow,
+                                                        zIndex: elevation,
+                                                        transition: 'transform 0.2s, box-shadow 0.2s'
                                                     }}
                                                     onPointerDown={e => {
                                                         if (e.button !== 1 && e.button !== 2 && tool !== "pan") {

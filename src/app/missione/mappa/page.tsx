@@ -15,12 +15,12 @@ const MAP_TIPS = [
 ];
 
 const TERRAIN_COLORS: Record<number, { color: string; label: string; emoji: string }> = {
-    0: { color: "#22c55e", label: "Erba", emoji: "🌿" },
-    1: { color: "#3b82f6", label: "Acqua", emoji: "💧" },
-    2: { color: "#92400e", label: "Terra", emoji: "🟫" },
-    3: { color: "#6b7280", label: "Pietra", emoji: "🪨" },
-    4: { color: "#15803d", label: "Foresta", emoji: "🌲" },
-    5: { color: "#ef4444", label: "Lava", emoji: "🔥" },
+    0: { color: "#22c55e", label: "Pianura (Erba)", emoji: "🌿" },
+    1: { color: "#3b82f6", label: "Lago (Acqua)", emoji: "💧" },
+    2: { color: "#92400e", label: "Montagna (Terra)", emoji: "🟫" },
+    3: { color: "#6b7280", label: "Rovine (Pietra)", emoji: "🪨" },
+    4: { color: "#fcd34d", label: "Deserto (Sabbia)", emoji: "🏜️" },
+    5: { color: "#e2e8f0", label: "Tundra (Neve)", emoji: "❄️" },
 };
 
 const POI_MARKERS = [
