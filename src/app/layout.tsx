@@ -5,6 +5,7 @@ import Starfield from "@/components/Starfield";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import FeedbackSystem from "@/components/FeedbackSystem";
+import GlobalChat from "@/components/GlobalChat";
 import "./globals.css";
 
 const firaSans = Fira_Sans({
@@ -50,6 +51,7 @@ export default function RootLayout({
 
         {/* Global UI Elements */}
         <FeedbackSystem />
+        <GlobalChat />
       </body>
     </html>
   );
