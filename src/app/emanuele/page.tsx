@@ -9,6 +9,7 @@ import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
 import { BarChart3, Ghost, ScrollText, MessageCircle, Headphones, Star, Settings, CalendarClock, Save, Users, Zap } from "lucide-react";
+import IntroSlideshow, { emanueleSlides } from "@/components/IntroSlideshow";
 
 const MISSIONS = [
     { href: "/emanuele/statistiche", icon: BarChart3, label: "Statistiche", desc: "HP, MP, ATK, DEF, VEL e Level Up XP!", storageKeys: ["gd_stats", "gd_hero_name"], color: "text-emerald-400" },
@@ -55,6 +56,14 @@ export default function EmanuelePage() {
             <Confetti show={allDone} />
 
             <div className="w-full">
+                <IntroSlideshow
+                    slides={emanueleSlides}
+                    storageKey="emanuele_intro_seen"
+                    personName="Emanuele"
+                    personEmoji="🎮"
+                    themeColor="blue"
+                />
+
                 {/* Dashboard Header */}
                 <div className="quest-card overflow-hidden mb-8 slide-up relative min-h-[300px] flex flex-col justify-end p-6 sm:p-10 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] rounded-2xl">
                     <Image

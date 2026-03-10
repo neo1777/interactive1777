@@ -9,6 +9,7 @@ import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
 import { User, Sword, Map, Smile, Image as ImageIcon, Star, Sparkles, LayoutPanelTop, Activity } from "lucide-react";
+import IntroSlideshow, { aliceSlides } from "@/components/IntroSlideshow";
 
 const MISSIONS = [
     { href: "/missione/personaggi", icon: User, label: "Personaggi", desc: "Eroe, nemici, amici — disegnali tutti!", storageKeys: ["iq_hero_front", "iq_hero", "iq_enemy_easy", "iq_enemies", "iq_friend_0", "iq_friends"], color: "text-purple-400" },
@@ -54,6 +55,14 @@ export default function AlicePage() {
             <Confetti show={allDone} />
 
             <div className="w-full max-w-4xl">
+                <IntroSlideshow
+                    slides={aliceSlides}
+                    storageKey="alice_intro_seen"
+                    personName="Alice"
+                    personEmoji="🎨"
+                    themeColor="fuchsia"
+                />
+
                 {/* Dashboard Header */}
                 <div className="quest-card overflow-hidden mb-8 slide-up relative min-h-[260px] flex flex-col justify-end p-6 sm:p-8 border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.15)]">
                     <Image

@@ -9,6 +9,7 @@ import Confetti from "@/components/Confetti";
 import ExportButton from "@/components/ExportButton";
 
 import { Settings2, Layers, PencilLine, Bug, Star, Map as MapIcon, Gauge, Dice5 } from "lucide-react";
+import IntroSlideshow, { giulianoSlides } from "@/components/IntroSlideshow";
 
 const MISSIONS = [
     { href: "/giuliano/setup", icon: Settings2, label: "Setup Mappa", desc: "Elevation, layer (8) e camera", storageKeys: ["ld_config", "ld_layers"], color: "text-emerald-400" },
@@ -52,6 +53,14 @@ export default function GiulianoPage() {
             <Confetti show={allDone} />
 
             <div className="w-full">
+                <IntroSlideshow
+                    slides={giulianoSlides}
+                    storageKey="giuliano_intro_seen"
+                    personName="Giuliano"
+                    personEmoji="🗺️"
+                    themeColor="emerald"
+                />
+
                 {/* Dashboard Header */}
                 <div className="quest-card overflow-hidden mb-8 slide-up relative min-h-[300px] flex flex-col justify-end p-6 sm:p-10 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] rounded-2xl">
                     <Image

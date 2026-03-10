@@ -77,7 +77,7 @@ export default function HudPage() {
                     </div>
                     <div className="mission-badge mb-2 bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30">🖥️ Nuova Missione</div>
                     <h1 className="text-3xl sm:text-4xl font-black glow-text text-white">HUD & Layout</h1>
-                    <p className="text-fuchsia-300/60 text-sm mt-1">Trascina gli elementi per progettare l'interfaccia di gioco.</p>
+                    <p className="text-fuchsia-300/60 text-sm mt-1">Trascina gli elementi per progettare l&apos;interfaccia di gioco.</p>
                 </div>
                 <div className="flex gap-4 items-center shrink-0">
                     <button onClick={() => setLayout(defaultLayout)} className="px-4 py-2 rounded-xl border border-white/10 text-white/50 hover:bg-white/10 text-xs font-bold transition-all">Reset Layout</button>

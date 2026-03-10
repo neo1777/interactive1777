@@ -193,7 +193,7 @@ export default function PerformancePage() {
                                         <span className="text-[10px] font-mono text-emerald-400">{enemies}</span>
                                     </div>
                                     <input type="range" min="0" max="250" value={enemies} onChange={e => {setEnemies(Number(e.target.value)); setSimulationRunning(true);}} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-black/50 accent-emerald-500" />
-                                    <p className="text-[9px] text-white/30 uppercase mt-2 font-mono leading-relaxed">Aumenta costantemente Draw Calls e Triangoli. L'impatto sulla CPU è alto.</p>
+                                    <p className="text-[9px] text-white/30 uppercase mt-2 font-mono leading-relaxed">Aumenta costantemente Draw Calls e Triangoli. L&apos;impatto sulla CPU è alto.</p>
                                 </div>
 
                                 <div>

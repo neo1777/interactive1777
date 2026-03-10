@@ -150,7 +150,7 @@ export default function DrawingOverlay({ screenshotSrc, onSave, onClear }: Drawi
         
         {/* Toolbar */}
         <div className="flex justify-between items-center p-2 bg-slate-900 border-b border-white/10">
-            <span className="text-xs font-bold text-emerald-400 font-fira-code uppercase tracking-wider ml-2">Disegna sull'immagine</span>
+            <span className="text-xs font-bold text-emerald-400 font-fira-code uppercase tracking-wider ml-2">Disegna sull&apos;immagine</span>
             <div className="flex gap-2">
                 <button 
                   onClick={handleClear}
