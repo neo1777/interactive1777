@@ -790,25 +790,30 @@ export default function IntroSlideshow({
   themeColor 
 }: IntroSlideshowProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(true); // Now controls the fullscreen overlay
   const [isReady, setIsReady] = useState(false);
   const [isFading, setIsFading] = useState(false);
+  const [alreadySeen, setAlreadySeen] = useState(true);
 
   // Persistence logic
   useEffect(() => {
     Promise.resolve().then(() => {
       const seen = localStorage.getItem(getStorageKey(storageKey));
-      if (seen === null) {
-        setIsCollapsed(false);
-      }
+      setAlreadySeen(seen === "true");
       setIsReady(true);
     });
   }, [storageKey]);
+
+  const handleStart = () => {
+    setCurrentSlide(0);
+    setIsCollapsed(false);
+  };
 
   const handleToggle = () => setIsCollapsed(!isCollapsed);
 
   const handleFinish = () => {
     localStorage.setItem(getStorageKey(storageKey), "true");
+    setAlreadySeen(true);
     setIsCollapsed(true);
   };
 
@@ -841,118 +846,180 @@ export default function IntroSlideshow({
   const slide = slides[currentSlide];
   const progress = ((currentSlide + 1) / slides.length) * 100;
   const isLast = currentSlide === slides.length - 1;
-
-  // Responsive button label logic
-  const toggleLabel = isCollapsed ? `Leggi l'Intro ${personEmoji}` : "Nascondi Intro";
   const themeAccent = themeColor === "fuchsia" ? "fuchsia" : themeColor === "blue" ? "blue" : "emerald";
 
   return (
-    <div className="w-full mb-6">
-      {/* Collapse Toggle Button */}
-      <button 
-        onClick={handleToggle}
-        className={`flex items-center gap-2 mb-3 text-xs font-mono font-bold uppercase tracking-wider transition-all
-          ${isCollapsed ? `text-${themeAccent}-400 hover:text-${themeAccent}-300` : "text-slate-500 hover:text-slate-400"}`}
-      >
-        <span className={`transition-transform duration-300 ${isCollapsed ? "" : "rotate-180"}`}>
-          {isCollapsed ? "▼" : "▲"}
-        </span>
-        {toggleLabel}
-      </button>
-
-      {/* Slideshow Content */}
-      <div 
-        className={`quest-card overflow-hidden transition-all duration-500 ease-in-out
-        ${isCollapsed ? "max-h-0 opacity-0 border-transparent shadow-none" : "max-h-[1200px] opacity-100"}`}
-      >
-        <div className="flex flex-col h-full bg-slate-950/40">
+    <div className="w-full mb-8">
+      {/* ─── Animated Banner (shown if not seen yet) ─── */}
+      {!alreadySeen && (
+        <div className={`relative group overflow-hidden rounded-2xl border border-${themeAccent}-500/30 bg-slate-900/40 backdrop-blur-md p-6 mb-6 animate-pulse-slow shadow-lg shadow-${themeAccent}-500/5`}>
+          {/* Animated Glow Background */}
+          <div className={`absolute -inset-1 bg-gradient-to-r from-${themeAccent}-500/0 via-${themeAccent}-500/10 to-${themeAccent}-500/0 group-hover:via-${themeAccent}-500/20 transition-all duration-1000 animate-slide-glow`} />
           
-          {/* Header & Progress */}
-          <div className="relative pt-6 px-6">
-            <div className={`absolute top-0 left-0 h-1 bg-${themeAccent}-500/50 transition-all duration-300`} style={{ width: `${progress}%` }} />
-            <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-              <span>[ Slide {currentSlide + 1} di {slides.length} ]</span>
-              <button onClick={() => setIsCollapsed(true)} className="hover:text-white transition-colors">
-                <X size={14} />
-              </button>
+          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-full bg-${themeAccent}-500/20 flex items-center justify-center text-3xl border border-${themeAccent}-500/20 shadow-inner`}>
+                {personEmoji}
+              </div>
+              <div className="text-center sm:text-left">
+                <h3 className={`text-lg font-black ${themeAccent === 'fuchsia' ? 'text-fuchsia-300' : themeAccent === 'blue' ? 'text-blue-300' : 'text-emerald-300'} uppercase tracking-tight`}>
+                  Benvenuta nel team, {personName}!
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-sm">
+                  Hai un ruolo fondamentale in <strong>Isometric Quest</strong>. Guarda l&apos;introduzione per iniziare!
+                </p>
+              </div>
             </div>
-          </div>
-
-          {/* Body */}
-          <div className={`flex-1 p-6 md:p-8 transition-opacity duration-150 ${isFading ? "opacity-0" : "opacity-100"}`}>
-            <div className="flex items-center gap-4 mb-4">
-              <span className={`text-3xl p-3 rounded-2xl ${slide.accentBg} border ${slide.accentBorder} float`}>
-                {slide.emoji}
+            
+            <button 
+              onClick={handleStart}
+              className={`group/btn relative px-8 py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all overflow-hidden
+                bg-${themeAccent}-600 hover:bg-${themeAccent}-500 text-white shadow-[0_0_20px_rgba(var(--${themeAccent}-rgb),0.3)]
+                hover:scale-105 active:scale-95`}
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <Play size={16} fill="white" className="group-hover/btn:translate-x-0.5 transition-transform" />
+                Avvia Intro
               </span>
-              <h2 className={`text-xl md:text-2xl font-bold font-mono ${slide.accentColor} glow-text`}>
-                {slide.title}
-              </h2>
-            </div>
-            
-            <div className="min-h-[200px]">
-              {slide.content}
-            </div>
+            </button>
           </div>
+        </div>
+      )}
 
-          {/* Footer Controls */}
-          <div className="p-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* ─── Compact Toggle for returning users ─── */}
+      {alreadySeen && (
+        <button 
+          onClick={handleStart}
+          className={`flex items-center gap-2 mb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all
+            text-slate-500 hover:text-${themeAccent}-400 active:scale-95`}
+        >
+          <div className={`w-5 h-5 rounded-md border border-slate-700 flex items-center justify-center text-[10px] group-hover:border-${themeAccent}-500/50`}>
+            {personEmoji}
+          </div>
+          Riguarda l&apos;Intro
+        </button>
+      )}
+
+      {/* ─── Fullscreen Overlay ─── */}
+      {!isCollapsed && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-500">
+          
+          {/* Close Button */}
+          <button 
+            onClick={() => setIsCollapsed(true)}
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all active:scale-90"
+          >
+            <X size={24} />
+          </button>
+
+          {/* Centered Content Area */}
+          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col items-center">
             
-            <div className="flex gap-2">
+            <div className="w-full flex justify-center mb-8">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                <div className={`h-1.5 w-32 bg-slate-800 rounded-full overflow-hidden`}>
+                  <div className={`h-full bg-${themeAccent}-500 transition-all duration-300`} style={{ width: `${progress}%` }} />
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest min-w-[80px] text-right">
+                  Slide {currentSlide + 1} / {slides.length}
+                </span>
+              </div>
+            </div>
+
+            <div className={`w-full relative px-12 md:px-20 transition-opacity duration-150 ${isFading ? "opacity-0" : "opacity-100"}`}>
+              
+              {/* Desktop Nav Arrows (Floaters) */}
               <button 
                 onClick={() => navigate(-1)} 
                 disabled={currentSlide === 0}
-                className={`p-2 rounded-lg border border-slate-700 transition-all disabled:opacity-20 hover:bg-white/5`}
+                className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center
+                  bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-0 transition-all active:scale-90 ${currentSlide === 0 ? 'pointer-events-none' : ''}`}
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={24} />
               </button>
+
+              <button 
+                onClick={() => navigate(1)} 
+                disabled={isLast}
+                className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center
+                  bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-0 transition-all active:scale-90 ${isLast ? 'pointer-events-none' : ''}`}
+              >
+                <ChevronRight size={24} />
+              </button>
+
+              {/* Slide Content Card */}
+              <div className={`quest-card bg-slate-900/60 border-${themeAccent}-500/20 p-8 md:p-12 shadow-2xl`}>
+                <div className="flex items-center gap-6 mb-8">
+                  <div className={`text-4xl p-4 rounded-3xl ${slide.accentBg} border ${slide.accentBorder} shadow-lg float`}>
+                    {slide.emoji}
+                  </div>
+                  <h2 className={`text-2xl md:text-3xl font-black font-mono ${slide.accentColor} glow-text tracking-tight`}>
+                    {slide.title}
+                  </h2>
+                </div>
+                
+                <div className="min-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                  {slide.content}
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile/Footer Controls */}
+            <div className="w-full max-w-md mt-10 flex flex-col items-center gap-6">
               
-              {/* Pagination Dots */}
-              <div className="flex items-center gap-1.5 px-3">
+              {/* Pagination Dots (Modernized) */}
+              <div className="flex items-center gap-2">
                 {slides.map((_, i) => (
                   <button 
                     key={i} 
                     onClick={() => {
+                      if (isFading) return;
                       setIsFading(true);
                       setTimeout(() => {
                         setCurrentSlide(i);
                         setIsFading(false);
                       }, 150);
                     }}
-                    className={`w-1.5 h-1.5 rounded-full transition-all 
-                      ${i === currentSlide ? `bg-${themeAccent}-400 w-4` : "bg-slate-700 hover:bg-slate-500"}`}
+                    className={`h-1.5 rounded-full transition-all duration-300
+                      ${i === currentSlide ? `bg-${themeAccent}-400 w-8 shadow-[0_0_8px_rgba(var(--${themeAccent}-rgb),0.5)]` : "bg-slate-800 hover:bg-slate-700 w-2"}`}
                   />
                 ))}
               </div>
 
-              <button 
-                onClick={() => navigate(1)} 
-                disabled={isLast}
-                className={`p-2 rounded-lg border border-slate-700 transition-all disabled:opacity-20 hover:bg-white/5`}
-              >
-                <ChevronRight size={20} />
-              </button>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-4 w-full">
+                {currentSlide > 0 && (
+                  <button 
+                    onClick={() => navigate(-1)}
+                    className="md:hidden flex-1 py-4 rounded-xl border border-white/10 bg-white/5 font-bold text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
+                  >
+                    Indietro
+                  </button>
+                )}
+                
+                {isLast ? (
+                  <button 
+                    onClick={handleFinish}
+                    className={`flex-[2] flex items-center justify-center gap-3 py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all
+                      bg-${themeAccent}-600 hover:bg-${themeAccent}-500 text-white shadow-xl shadow-${themeAccent}-900/40 hover:scale-[1.02] active:scale-95 bounce-in`}
+                  >
+                    Ho capito! Inizia {personEmoji}
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => navigate(1)}
+                    className={`flex-[2] flex items-center justify-center gap-2 py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all
+                      bg-white/10 hover:bg-white/20 text-white active:scale-[0.98]`}
+                  >
+                    Successiva <ChevronRight size={18} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            {isLast ? (
-              <button 
-                onClick={handleFinish}
-                className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all
-                  bg-${themeAccent}-600 hover:bg-${themeAccent}-500 text-white shadow-lg shadow-${themeAccent}-900/20 bounce-in`}
-              >
-                Ho capito! Inizia le missioni {personEmoji} <ChevronRight size={18} />
-              </button>
-            ) : (
-              <button 
-                onClick={() => navigate(1)}
-                className="text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors hidden sm:block"
-              >
-                Slide Successiva →
-              </button>
-            )}
           </div>
-
         </div>
-      </div>
+      )}
     </div>
   );
 }
