@@ -174,16 +174,24 @@ export default function EmanuelePage() {
                             </div>
                         </div>
 
-                        <div className="quest-card overflow-hidden slide-up relative group border-emerald-500/20" style={{ animationDelay: "0.5s" }}>
+                        <a 
+                            href={getAssetPath("/docs/emanuele_game_designer_v2.pdf")} 
+                            download 
+                            className="quest-card overflow-hidden slide-up relative group cursor-pointer block hover:border-emerald-500/50 transition-all border-emerald-500/20" 
+                            style={{ animationDelay: "0.5s" }}
+                        >
                             <div className="w-full h-[180px] relative bg-black/80">
                                 <Image src={getAssetPath("/assets/game_designer_workbook_cover.png")} alt="Manuale del Game Designer" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--quest-card)] via-transparent to-transparent pointer-events-none" />
                             </div>
                             <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col items-center">
                                 <h3 className="text-white font-black text-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center tracking-tight">Manuale Game Designer</h3>
-                                <p className="text-xs text-emerald-400 font-bold bg-black/60 px-2 py-0.5 rounded-full mt-1 border border-white/10 backdrop-blur-sm shadow-lg">Documentazione</p>
+                                <p className="text-xs text-emerald-400 font-bold bg-black/60 px-2 py-0.5 rounded-full mt-1 border border-white/10 backdrop-blur-sm shadow-lg flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                    Scarica PDF
+                                </p>
                             </div>
-                        </div>
+                        </a>
                     </div>
                 </div>
             </div>
