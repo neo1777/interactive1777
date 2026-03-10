@@ -40,6 +40,11 @@ export default function GlobalChat() {
         if (storedUpdateId) {
             lastUpdateIdRef.current = parseInt(storedUpdateId, 10);
         }
+
+        const handleOpenChat = () => setIsOpen(true);
+        window.addEventListener("open-isoquest-chat", handleOpenChat);
+
+        return () => window.removeEventListener("open-isoquest-chat", handleOpenChat);
     }, []);
 
     // Save history
@@ -164,20 +169,7 @@ export default function GlobalChat() {
 
     return (
         <div className="fixed bottom-6 left-6 z-[9998] flex items-end">
-            {!isOpen && (
-                <button
-                    onClick={() => setIsOpen(true)}
-                    className="group relative flex items-center justify-center w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-indigo-300/30"
-                >
-                    <MessageCircle size={24} className="group-hover:scale-110 transition-transform" />
-                    <span className="absolute left-full ml-4 px-3 py-1 bg-indigo-900/90 text-indigo-100 text-xs rounded-lg whitespace-nowrap opacity-0 md:group-hover:opacity-100 pointer-events-none transition-opacity border border-indigo-500/30">
-                        Chat Supporto
-                    </span>
-                    
-                    {/* Tiny pulsing dot to indicate connection */}
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full animate-pulse border-2 border-indigo-900"></span>
-                </button>
-            )}
+
 
             {isOpen && (
                 <div className="w-[calc(100vw-3rem)] sm:w-96 bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 duration-300" style={{ height: "450px", maxHeight: "80vh" }}>

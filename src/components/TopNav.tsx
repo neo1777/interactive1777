@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Bell, User, ChevronRight, Menu } from "lucide-react";
+import { Search, Bell, User, ChevronRight, Menu, MessageCircle } from "lucide-react";
 
 export default function TopNav() {
     const pathname = usePathname();
@@ -51,6 +51,15 @@ export default function TopNav() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 sm:gap-4">
+                    <button 
+                        onClick={() => window.dispatchEvent(new CustomEvent("open-isoquest-chat"))}
+                        className="p-2 text-indigo-400 hover:text-white hover:bg-indigo-500/20 rounded-xl transition-all relative group cursor-pointer"
+                        title="Chat Supporto"
+                    >
+                        <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full border-2 border-[var(--quest-primary)] animate-pulse"></span>
+                    </button>
+
                     <button className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-all relative group cursor-pointer">
                         <Bell className="w-5 h-5" />
                         <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full border-2 border-[var(--quest-primary)] group-hover:scale-110 transition-transform"></span>
