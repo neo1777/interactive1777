@@ -29,9 +29,20 @@ export default function FeedbackSystem() {
             const imgData = await htmlToImage.toJpeg(targetElement as HTMLElement, {
                 quality: 0.6,
                 backgroundColor: "#020617",
+                skipFonts: true, // Crucial for ignoring Google Fonts CORS issues on GH Pages
+                imagePlaceholder: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", // Blank pixel for failed images
+                pixelRatio: 1, // Prevent huge resolution crashes on retina screens
+                fetchRequestInit: {
+                    cache: 'no-cache',
+                    credentials: 'omit'
+                },
                 filter: (node) => {
                     const el = node as HTMLElement;
-                    return el?.id !== "feedback-ui" && el?.id !== "didactic-portal";
+                    // Ignore anything that can crash the serialization
+                    if (el?.tagName?.toLowerCase() === "canvas") return false;
+                    if (el?.tagName?.toLowerCase() === "svg") return false;
+                    if (el?.id === "feedback-ui" || el?.id === "didactic-portal") return false;
+                    return true;
                 }
             });
             setScreenshot(imgData);
