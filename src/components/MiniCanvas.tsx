@@ -550,23 +550,13 @@ export default function MiniCanvas({
                 {!isFullscreen && CanvasWrapper}
 
                 {!isFullscreen && (
-                    <>
-                        <button
-                            onClick={() => setIsFullscreen(true)}
-                            className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110 shadow-lg"
-                            title="Schermo intero"
-                        >
-                            <Maximize2 className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => setShowTools(s => !s)}
-                            className="absolute top-2 right-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-emerald-400 border border-emerald-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500/20 hover:scale-110 shadow-lg"
-                            title="Strumenti"
-                        >
-                            <Paintbrush className="w-4 h-4" />
-                        </button>
-                        {showTools && ToolBar}
-                    </>
+                    <button
+                        onClick={() => setIsFullscreen(true)}
+                        className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110 shadow-lg"
+                        title="Apri a schermo intero per disegnare"
+                    >
+                        <Maximize2 className="w-4 h-4" />
+                    </button>
                 )}
             </div>
 
