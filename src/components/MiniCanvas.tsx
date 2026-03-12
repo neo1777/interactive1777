@@ -5,12 +5,14 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { getStroke } from "perfect-freehand";
 import { getStorageKey } from "@/lib/storage";
-import { Trash2, Paintbrush, Eraser, Move, Maximize2, Minimize2, Undo2, Redo2, Pencil, Highlighter } from "lucide-react";
+import {
+    Trash2, Paintbrush, Eraser, Maximize2, Minimize2,
+    Undo2, Redo2, Pencil, Highlighter,
+} from "lucide-react";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type Point = { x: number; y: number; pressure?: number };
 type BrushPreset = "pencil" | "marker" | "highlighter";
-
 type MiniStroke = {
     color: string;
     size: number;
@@ -20,7 +22,7 @@ type MiniStroke = {
     eraser: boolean;
 };
 
-// ── Color palette (16 kid-friendly colors incl. skintones) ───────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = [
     "#ffffff", "#1a1a2e", "#ef4444", "#f97316",
     "#eab308", "#10b981", "#3b82f6", "#8b5cf6",
@@ -28,177 +30,178 @@ const COLORS = [
     "#a16207", "#d97706", "#fca5a5", "#fde68a",
 ];
 
-// ── Brush preset settings for perfect-freehand ────────────────────────────────
-const BRUSH_OPTIONS: Record<BrushPreset, Parameters<typeof getStroke>[1]> = {
+const BRUSH_OPTS: Record<BrushPreset, Parameters<typeof getStroke>[1]> = {
     pencil: {
-        size: 1,
-        thinning: 0.7,
-        smoothing: 0.3,
-        streamline: 0.3,
+        size: 1, thinning: 0.7, smoothing: 0.3, streamline: 0.3,
         easing: (t: number) => t * t,
         start: { taper: 8, easing: (t: number) => t * t, cap: true },
         end: { taper: 8, easing: (t: number) => 1 - (1 - t) * (1 - t), cap: true },
-        simulatePressure: false,
-        last: true,
+        simulatePressure: false, last: true,
     },
     marker: {
-        size: 1,
-        thinning: 0.05,
-        smoothing: 0.6,
-        streamline: 0.5,
+        size: 1, thinning: 0.05, smoothing: 0.6, streamline: 0.5,
         easing: (t: number) => t,
         start: { taper: 2, cap: true },
         end: { taper: 2, cap: true },
-        simulatePressure: false,
-        last: true,
+        simulatePressure: false, last: true,
     },
     highlighter: {
-        size: 1,
-        thinning: 0,
-        smoothing: 0.8,
-        streamline: 0.7,
+        size: 1, thinning: 0, smoothing: 0.8, streamline: 0.7,
         easing: (t: number) => t,
         start: { taper: 0, cap: false },
         end: { taper: 0, cap: false },
-        simulatePressure: false,
-        last: true,
+        simulatePressure: false, last: true,
     },
 };
 
-function svgPath(stroke: number[][]): string {
-    if (stroke.length < 2) return "";
+const MAX_HISTORY = 50;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function svgPath(pts: number[][]): string {
+    if (pts.length < 2) return "";
     try {
-        const d = stroke.reduce(
-            (acc: (string | number)[], [x0, y0]: number[], i: number, arr: number[][]) => {
-                const [x1, y1] = arr[(i + 1) % arr.length];
+        const d = pts.reduce(
+            (acc: (string | number)[], [x0, y0]: number[], i: number, a: number[][]) => {
+                const [x1, y1] = a[(i + 1) % a.length];
                 acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
                 return acc;
             },
-            ["M", ...stroke[0], "Q"]
+            ["M", ...pts[0], "Q"]
         );
         d.push("Z");
         return d.join(" ");
-    } catch {
-        return "";
-    }
+    } catch { return ""; }
 }
 
-function drawStrokes(
-    ctx: CanvasRenderingContext2D,
-    allStrokes: MiniStroke[],
-    w: number,
-    h: number,
+/**
+ * Paint all strokes onto a canvas element.
+ * logicalW / logicalH = the coordinate space strokes are stored in.
+ * The canvas element should already be positioned/sized by CSS.
+ * This function sets canvas.width/height (pixel resolution) from the
+ * element's current displayed size × devicePixelRatio.
+ */
+function paint(
+    canvas: HTMLCanvasElement,
+    strokes: MiniStroke[],
+    logicalW: number,
+    logicalH: number,
     grid?: number
 ) {
-    try {
-        ctx.clearRect(0, 0, w, h);
-        if (grid) {
-            ctx.save();
-            ctx.strokeStyle = "rgba(255,255,255,0.06)";
-            ctx.lineWidth = 1;
-            for (let x = 0; x <= w; x += grid) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-            }
-            for (let y = 0; y <= h; y += grid) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-            }
-            ctx.restore();
-        }
-        for (const s of allStrokes) {
-            if (!s?.points || s.points.length < 2) continue;
-            const opts = {
-                ...BRUSH_OPTIONS[s.preset || "marker"],
-                size: s.size,
-                simulatePressure: s.points.every(p => (p.pressure ?? 0.5) === 0.5),
-            };
-            const outline = getStroke(s.points, opts);
-            const pathData = svgPath(outline);
-            if (!pathData) continue;
-            ctx.save();
-            if (s.eraser) {
-                ctx.globalCompositeOperation = "destination-out";
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = "rgba(0,0,0,1)";
-            } else if (s.preset === "highlighter") {
-                ctx.globalCompositeOperation = "source-over";
-                ctx.globalAlpha = (s.opacity ?? 1) * 0.45;
-                ctx.fillStyle = s.color;
-            } else {
-                ctx.globalCompositeOperation = "source-over";
-                ctx.globalAlpha = s.opacity ?? 1;
-                ctx.fillStyle = s.color;
-            }
-            try { ctx.fill(new Path2D(pathData)); } catch { /* ignore */ }
-            ctx.restore();
-        }
-    } catch (err) {
-        console.error("MiniCanvas draw error:", err);
-    }
-}
-
-/** Setup canvas DPR and scale — returns true if resized */
-function setupCanvas(canvas: HTMLCanvasElement, w: number, h: number) {
     const dpr = window.devicePixelRatio || 1;
-    const needsResize = canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr);
-    if (needsResize) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(h * dpr);
-        canvas.style.width = `${w}px`;
-        canvas.style.height = `${h}px`;
-        const ctx = canvas.getContext("2d");
-        if (ctx) ctx.scale(dpr, dpr);
+    const displayW = canvas.clientWidth;
+    const displayH = canvas.clientHeight;
+    if (displayW <= 0 || displayH <= 0) return;
+
+    const physW = Math.round(displayW * dpr);
+    const physH = Math.round(displayH * dpr);
+
+    // Only resize backing store if needed (avoid clearing unnecessarily)
+    if (canvas.width !== physW || canvas.height !== physH) {
+        canvas.width = physW;
+        canvas.height = physH;
     }
-    return needsResize;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Map logical → display (+ DPR)
+    ctx.setTransform(dpr * displayW / logicalW, 0, 0, dpr * displayH / logicalH, 0, 0);
+    ctx.clearRect(0, 0, logicalW, logicalH);
+
+    // Grid
+    if (grid) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.07)";
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x <= logicalW; x += grid) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, logicalH); ctx.stroke();
+        }
+        for (let y = 0; y <= logicalH; y += grid) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(logicalW, y); ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // Strokes
+    for (const s of strokes) {
+        if (!s?.points || s.points.length < 2) continue;
+        const opts = {
+            ...BRUSH_OPTS[s.preset ?? "marker"],
+            size: s.size,
+            simulatePressure: s.points.every(p => (p.pressure ?? 0.5) > 0.49 && (p.pressure ?? 0.5) < 0.51),
+        };
+        const outline = getStroke(s.points, opts);
+        const pathStr = svgPath(outline);
+        if (!pathStr) continue;
+        ctx.save();
+        if (s.eraser) {
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = "rgba(0,0,0,1)";
+        } else if (s.preset === "highlighter") {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = (s.opacity ?? 1) * 0.45;
+            ctx.fillStyle = s.color;
+        } else {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = s.opacity ?? 1;
+            ctx.fillStyle = s.color;
+        }
+        try { ctx.fill(new Path2D(pathStr)); } catch { /* bad path, skip */ }
+        ctx.restore();
+    }
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface MiniCanvasProps {
     storageKey: string;
     label?: string;
+    /** Inline preview pixel dimensions */
     width?: number;
     height?: number;
     className?: string;
-    withZoomPan?: boolean;
+    /** Multiplier: logical canvas = width×logicalScale × height×logicalScale */
+    logicalScale?: number;
     grid?: number;
 }
 
-const MAX_HISTORY = 50;
-
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function MiniCanvas({
-    storageKey, label, width = 300, height = 300,
-    className = "", withZoomPan = false, grid,
+    storageKey,
+    label,
+    width = 300,
+    height = 300,
+    className = "",
+    logicalScale = 4,
+    grid,
 }: MiniCanvasProps) {
-    // Two separate canvas refs: one inline, one for the fullscreen portal
-    const inlineCanvasRef = useRef<HTMLCanvasElement>(null);
-    const fullCanvasRef = useRef<HTMLCanvasElement>(null);
+    // Canvas refs
+    const inlineRef = useRef<HTMLCanvasElement>(null);
+    const fullRef = useRef<HTMLCanvasElement>(null);
 
-    // Drawing state
+    // Logical drawing space (4× preview = large drawing area)
+    const LOGICAL_W = width * logicalScale;
+    const LOGICAL_H = height * logicalScale;
+
+    // State
     const [strokes, setStrokes] = useState<MiniStroke[]>([]);
     const [past, setPast] = useState<MiniStroke[][]>([]);
     const [future, setFuture] = useState<MiniStroke[][]>([]);
     const [current, setCurrent] = useState<MiniStroke | null>(null);
 
-    // Tool state
     const [preset, setPreset] = useState<BrushPreset>("marker");
-    const [tool, setTool] = useState<"draw" | "eraser" | "pan">("draw");
+    const [tool, setTool] = useState<"draw" | "eraser">("draw");
     const [color, setColor] = useState(COLORS[0]);
-    const [size, setSize] = useState(10);
+    const [size, setSize] = useState(20);
     const [opacity, setOpacity] = useState(1);
+
     const [showTools, setShowTools] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
-    // Pan/zoom (CSS only, no coordinate transform)
-    const [zoom, setZoom] = useState(1);
-    const [pan, setPan] = useState({ x: 0, y: 0 });
-    const panStart = useRef<{ x: number; y: number } | null>(null);
-
-    const canvasW = withZoomPan ? width * 3 : width;
-    const canvasH = withZoomPan ? height * 3 : height;
-
     useEffect(() => { setMounted(true); }, []);
 
-    // ── Load ──────────────────────────────────────────────────────────────────
+    // ── Persist ───────────────────────────────────────────────────────────────
     useEffect(() => {
         try {
             const raw = localStorage.getItem(getStorageKey(storageKey));
@@ -206,17 +209,15 @@ export default function MiniCanvas({
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) setStrokes(parsed);
             }
-        } catch (e) { console.error("MiniCanvas load:", e); }
+        } catch { /* ignore */ }
     }, [storageKey]);
 
-    // ── Save ──────────────────────────────────────────────────────────────────
     useEffect(() => {
-        try {
-            localStorage.setItem(getStorageKey(storageKey), JSON.stringify(strokes));
-        } catch (e) { console.error("MiniCanvas save:", e); }
+        try { localStorage.setItem(getStorageKey(storageKey), JSON.stringify(strokes)); }
+        catch { /* ignore */ }
     }, [strokes, storageKey]);
 
-    // ── Undo/Redo ─────────────────────────────────────────────────────────────
+    // ── Undo / Redo ───────────────────────────────────────────────────────────
     const undo = useCallback(() => {
         if (!past.length) return;
         const prev = past[past.length - 1];
@@ -233,89 +234,78 @@ export default function MiniCanvas({
         setStrokes(next);
     }, [future, strokes]);
 
-    // ── Keyboard shortcuts ────────────────────────────────────────────────────
+    // ── Keyboard ──────────────────────────────────────────────────────────────
     useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
+        const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isFullscreen) { setIsFullscreen(false); setShowTools(false); return; }
-            if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+            if (!isFullscreen) return;
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") { e.preventDefault(); undo(); }
             if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
         };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
     }, [isFullscreen, undo, redo]);
 
-    // ── Body scroll lock ──────────────────────────────────────────────────────
+    // ── Scroll lock ───────────────────────────────────────────────────────────
     useEffect(() => {
         document.body.style.overflow = isFullscreen ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
     }, [isFullscreen]);
 
-    // ── Redraw BOTH canvases from state ───────────────────────────────────────
-    const redraw = useCallback(() => {
+    // ── Redraw: paint both canvases from strokes state ────────────────────────
+    const repaint = useCallback(() => {
         const all = current ? [...strokes, current] : strokes;
+        if (inlineRef.current) paint(inlineRef.current, all, LOGICAL_W, LOGICAL_H, grid);
+        if (fullRef.current && isFullscreen) paint(fullRef.current, all, LOGICAL_W, LOGICAL_H, grid);
+    }, [strokes, current, LOGICAL_W, LOGICAL_H, grid, isFullscreen]);
 
-        // Inline canvas
-        const ic = inlineCanvasRef.current;
-        if (ic) {
-            setupCanvas(ic, canvasW, canvasH);
-            const ctx = ic.getContext("2d");
-            if (ctx) drawStrokes(ctx, all, canvasW, canvasH, grid);
-        }
+    useEffect(() => { if (mounted) repaint(); }, [repaint, mounted]);
 
-        // Fullscreen canvas (only if it's mounted in the portal)
-        const fc = fullCanvasRef.current;
-        if (fc) {
-            setupCanvas(fc, canvasW, canvasH);
-            const ctx = fc.getContext("2d");
-            if (ctx) drawStrokes(ctx, all, canvasW, canvasH, grid);
-        }
-    }, [strokes, current, canvasW, canvasH, grid]);
+    // When fullscreen opens, give DOM a tick to size the canvas, then paint
+    useEffect(() => {
+        if (!isFullscreen) return;
+        const id = requestAnimationFrame(() => {
+            const all = current ? [...strokes, current] : strokes;
+            if (fullRef.current) paint(fullRef.current, all, LOGICAL_W, LOGICAL_H, grid);
+        });
+        return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isFullscreen]);
 
-    useEffect(() => { if (mounted) redraw(); }, [redraw, mounted]);
-
-    // ── Point calculation: use the canvas element's OWN visual bounding rect ──
-    const getPoint = useCallback((e: React.PointerEvent, canvasEl: HTMLCanvasElement | null): Point => {
-        if (!canvasEl) return { x: 0, y: 0, pressure: 0.5 };
-        const rect = canvasEl.getBoundingClientRect();
-        // getBoundingClientRect accounts for CSS transform (zoom), so divide by zoom
+    // ── Coordinate mapping ────────────────────────────────────────────────────
+    // The fullscreen canvas fills the viewport via CSS (inset:0).
+    // canvas.getBoundingClientRect() tells us exactly where it is.
+    const getPoint = useCallback((e: React.PointerEvent): Point => {
+        const c = fullRef.current;
+        if (!c) return { x: 0, y: 0, pressure: 0.5 };
+        const r = c.getBoundingClientRect();
         return {
-            x: (e.clientX - rect.left) / zoom,
-            y: (e.clientY - rect.top) / zoom,
+            x: (e.clientX - r.left) * LOGICAL_W / r.width,
+            y: (e.clientY - r.top) * LOGICAL_H / r.height,
             pressure: e.pressure > 0 ? e.pressure : 0.5,
         };
-    }, [zoom]);
+    }, [LOGICAL_W, LOGICAL_H]);
 
-    const handleDown = useCallback((e: React.PointerEvent<HTMLDivElement>, canvasEl: HTMLCanvasElement | null) => {
+    // ── Pointer handlers ──────────────────────────────────────────────────────
+    const onDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         if ((e.target as HTMLElement).closest("button,input")) return;
         e.preventDefault();
         try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ok */ }
-
-        if (tool === "pan" && withZoomPan) {
-            panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-            return;
-        }
-        const pt = getPoint(e, canvasEl);
         setCurrent({
             color, size, opacity,
             preset: tool === "eraser" ? "marker" : preset,
-            points: [pt],
+            points: [getPoint(e)],
             eraser: tool === "eraser",
         });
-    }, [tool, color, size, opacity, preset, withZoomPan, pan, getPoint]);
+    }, [color, size, opacity, tool, preset, getPoint]);
 
-    const handleMove = useCallback((e: React.PointerEvent<HTMLDivElement>, canvasEl: HTMLCanvasElement | null) => {
-        if (tool === "pan" && panStart.current) {
-            setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
-            return;
-        }
+    const onMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         if (!current) return;
-        const pt = getPoint(e, canvasEl);
-        setCurrent(prev => prev ? { ...prev, points: [...prev.points, pt] } : prev);
-    }, [current, tool, getPoint]);
+        setCurrent(prev => prev ? { ...prev, points: [...prev.points, getPoint(e)] } : prev);
+    }, [current, getPoint]);
 
-    const handleUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const onUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         try { e.currentTarget?.releasePointerCapture(e.pointerId); } catch { /* ok */ }
-        panStart.current = null;
         setCurrent(prev => {
             if (prev && prev.points.length > 1) {
                 setPast(p => [...p, strokes].slice(-MAX_HISTORY));
@@ -326,12 +316,6 @@ export default function MiniCanvas({
         });
     }, [strokes]);
 
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-        if (!withZoomPan) return;
-        e.preventDefault();
-        setZoom(z => Math.max(0.3, Math.min(5, z - e.deltaY * 0.001)));
-    }, [withZoomPan]);
-
     const clearAll = useCallback(() => {
         setPast(p => [...p, strokes].slice(-MAX_HISTORY));
         setFuture([]);
@@ -340,80 +324,74 @@ export default function MiniCanvas({
         try { localStorage.removeItem(getStorageKey(storageKey)); } catch { /* ok */ }
     }, [strokes, storageKey]);
 
-    // ── Toolbar (only shown in fullscreen) ────────────────────────────────────
-    const ToolBar = (
-        <div className="absolute bottom-3 left-3 right-3 z-30 bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-            {/* Row 1: Tools */}
-            <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-white/5 flex-wrap">
-                <button onClick={() => { setPreset("pencil"); setTool("draw"); }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${preset === "pencil" && tool === "draw" ? "bg-amber-500/30 text-amber-300 border-amber-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border-transparent"}`}
-                    title="Matita — tratto sottile con pressione">
-                    <Pencil className="w-3.5 h-3.5" /> Matita
-                </button>
-                <button onClick={() => { setPreset("marker"); setTool("draw"); }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${preset === "marker" && tool === "draw" ? "bg-emerald-500/30 text-emerald-300 border-emerald-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border-transparent"}`}
-                    title="Pennarello — tratto uniforme">
-                    <Paintbrush className="w-3.5 h-3.5" /> Marker
-                </button>
-                <button onClick={() => { setPreset("highlighter"); setTool("draw"); }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${preset === "highlighter" && tool === "draw" ? "bg-yellow-500/30 text-yellow-300 border-yellow-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border-transparent"}`}
-                    title="Evidenziatore — semitrasparente">
-                    <Highlighter className="w-3.5 h-3.5" /> Evidenz.
-                </button>
+    const exitFS = useCallback(() => {
+        setIsFullscreen(false);
+        setShowTools(false);
+    }, []);
+
+    // ── Toolbar ───────────────────────────────────────────────────────────────
+    const Toolbar = (
+        <div style={{ position: "absolute", bottom: 12, left: 12, right: 12, zIndex: 20 }}
+            className="bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
+            {/* Row 1: Presets + tools */}
+            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/5 flex-wrap">
+                {(["pencil", "marker", "highlighter"] as BrushPreset[]).map(p => {
+                    const Icon = { pencil: Pencil, marker: Paintbrush, highlighter: Highlighter }[p];
+                    const label = { pencil: "Matita", marker: "Marker", highlighter: "Evid." }[p];
+                    const active = preset === p && tool === "draw";
+                    const cls = {
+                        pencil: "bg-amber-500/30 text-amber-300 border-amber-500/40",
+                        marker: "bg-emerald-500/30 text-emerald-300 border-emerald-500/40",
+                        highlighter: "bg-yellow-500/30 text-yellow-300 border-yellow-500/40",
+                    }[p];
+                    return (
+                        <button key={p} onClick={() => { setPreset(p); setTool("draw"); }}
+                            className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${active ? cls : "bg-white/5 text-white/40 hover:bg-white/10 border-transparent"}`}>
+                            <Icon className="w-3.5 h-3.5" /> {label}
+                        </button>
+                    );
+                })}
                 <div className="w-px h-5 bg-white/10 mx-0.5" />
                 <button onClick={() => setTool("eraser")}
                     className={`p-1.5 rounded-lg transition-all border ${tool === "eraser" ? "bg-pink-600/40 text-pink-300 border-pink-500/40" : "bg-white/5 text-white/40 hover:bg-white/10 border-transparent"}`}
-                    title="Gomma"><Eraser className="w-4 h-4" />
-                </button>
-                {withZoomPan && (
-                    <button onClick={() => setTool("pan")}
-                        className={`p-1.5 rounded-lg transition-all border ${tool === "pan" ? "bg-blue-600/40 text-blue-300 border-blue-500/40" : "bg-white/5 text-white/40 hover:bg-white/10 border-transparent"}`}
-                        title="Sposta"><Move className="w-4 h-4" />
-                    </button>
-                )}
+                    title="Gomma"><Eraser className="w-4 h-4" /></button>
                 <div className="w-px h-5 bg-white/10 mx-0.5" />
                 <button onClick={undo} disabled={!past.length}
-                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                    title="Annulla (Ctrl+Z)"><Undo2 className="w-4 h-4" />
-                </button>
+                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 transition-all"
+                    title="Annulla (Ctrl+Z)"><Undo2 className="w-4 h-4" /></button>
                 <button onClick={redo} disabled={!future.length}
-                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                    title="Ripeti (Ctrl+Shift+Z)"><Redo2 className="w-4 h-4" />
-                </button>
+                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 transition-all"
+                    title="Ripeti (Ctrl+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
                 <div className="w-px h-5 bg-white/10 mx-0.5" />
                 <button onClick={clearAll}
                     className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-all"
-                    title="Cancella tutto"><Trash2 className="w-4 h-4" />
-                </button>
+                    title="Cancella tutto"><Trash2 className="w-4 h-4" /></button>
             </div>
-
-            {/* Row 2: Colors + size + opacity */}
-            <div className="px-3 py-2.5 flex flex-wrap gap-2 items-center">
+            {/* Row 2: Colors + sliders */}
+            <div className="px-3 py-2 flex flex-wrap gap-2 items-center">
                 <div className="flex flex-wrap gap-1 flex-1">
                     {COLORS.map(c => (
                         <button key={c} onClick={() => { setColor(c); if (tool === "eraser") setTool("draw"); }}
                             className="rounded-full transition-all hover:scale-110"
                             style={{
-                                width: 20, height: 20,
-                                background: c,
+                                width: 20, height: 20, background: c,
                                 outline: color === c ? "2px solid white" : "2px solid transparent",
                                 outlineOffset: 1,
                                 boxShadow: color === c ? "0 0 8px rgba(255,255,255,0.6)" : "none",
                                 border: c === "#ffffff" ? "1px solid rgba(255,255,255,0.2)" : "none",
-                            }} title={c} />
+                            }} />
                     ))}
                     <input type="color" value={color}
                         onChange={e => { setColor(e.target.value); if (tool === "eraser") setTool("draw"); }}
                         className="w-5 h-5 rounded-full overflow-hidden p-0 bg-transparent border-0 cursor-pointer"
                         title="Colore personalizzato" />
                 </div>
-                <div className="flex flex-col gap-1.5 min-w-[90px]">
+                <div className="flex flex-col gap-1.5 min-w-[120px]">
                     <div className="flex items-center gap-2">
-                        <div className="rounded-full bg-white/70 shrink-0"
-                            style={{ width: Math.max(4, Math.min(16, size * 0.7)), height: Math.max(4, Math.min(16, size * 0.7)) }} />
-                        <input type="range" min="2" max="60" value={size}
+                        <div className="rounded-full bg-white/70 shrink-0" style={{ width: Math.max(4, Math.min(18, size * 0.15)), height: Math.max(4, Math.min(18, size * 0.15)) }} />
+                        <input type="range" min="4" max="120" value={size}
                             onChange={e => setSize(Number(e.target.value))}
-                            className="flex-1 h-1 accent-emerald-400" title={`Dimensione: ${size}px`} />
+                            className="flex-1 h-1 accent-emerald-400" title={`Dimensione: ${size}`} />
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-[9px] text-white/30 w-6 text-right">{Math.round(opacity * 100)}%</span>
@@ -427,100 +405,99 @@ export default function MiniCanvas({
     );
 
     // ── Fullscreen portal ─────────────────────────────────────────────────────
-    const fullscreenContent = isFullscreen ? (
+    // The outer div covers 100% of the viewport (position:fixed, inset:0).
+    // The inner div (drawing surface) also fills it completely (position:absolute, inset:0).
+    // The canvas element fills the inner div via CSS (inset:0), so clientWidth/Height
+    // reflect the actual viewport size — paint() uses those for the backing store.
+    const portal = isFullscreen ? (
         <div
-            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#08051a", display: "flex", flexDirection: "column" }}
-            className="font-sans"
+            style={{
+                position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 9999,
+                background: "#0a0820",
+            }}
         >
+            {/* Drawing surface — fills the entire fixed overlay */}
             <div
-                className="relative flex-1 touch-none overflow-hidden"
-                style={{ cursor: tool === "pan" ? "grab" : "crosshair" }}
-                onPointerDown={e => handleDown(e, fullCanvasRef.current)}
-                onPointerMove={e => handleMove(e, fullCanvasRef.current)}
-                onPointerUp={handleUp}
-                onPointerCancel={handleUp}
-                onWheel={handleWheel}
+                style={{
+                    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                    cursor: tool === "eraser" ? "cell" : "crosshair",
+                    touchAction: "none",
+                }}
+                onPointerDown={onDown}
+                onPointerMove={onMove}
+                onPointerUp={onUp}
+                onPointerCancel={onUp}
             >
-                {/* Centered canvas backdrop */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/20"
-                        style={{ width: canvasW, height: canvasH }}>
-                        <div style={{
-                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                            transformOrigin: "0 0",
-                            width: canvasW,
-                            height: canvasH,
-                            position: "absolute",
-                        }}>
-                            <canvas ref={fullCanvasRef} className="block" />
-                        </div>
-                    </div>
-                </div>
+                {/* The canvas: CSS inset:0 makes clientWidth/clientHeight = viewport size */}
+                <canvas
+                    ref={fullRef}
+                    style={{
+                        position: "absolute",
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        width: "100%", height: "100%",
+                        display: "block",
+                        pointerEvents: "none",
+                    }}
+                />
 
-                {/* Top controls */}
-                <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-start pointer-events-none">
-                    <button
-                        onClick={() => { setIsFullscreen(false); setShowTools(false); }}
-                        className="w-10 h-10 rounded-xl bg-black/70 backdrop-blur border border-purple-500/40 text-purple-400 flex items-center justify-center hover:bg-purple-500/20 hover:scale-105 transition-all shadow-lg pointer-events-auto"
-                        title="Esci (ESC)"
-                    >
-                        <Minimize2 className="w-5 h-5" />
+                {/* HUD: exit + tools toggle */}
+                <div style={{
+                    position: "absolute", top: 12, left: 12, right: 12,
+                    zIndex: 10, display: "flex", justifyContent: "space-between",
+                    alignItems: "center", pointerEvents: "none",
+                }}>
+                    <button onClick={exitFS} style={{ pointerEvents: "auto" }}
+                        className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-black/70 backdrop-blur border border-purple-500/40 text-purple-400 hover:bg-purple-500/20 transition-all shadow-lg text-xs font-bold"
+                        title="Esci (ESC)">
+                        <Minimize2 className="w-4 h-4" /> Esci
                     </button>
-                    <button
-                        onClick={() => setShowTools(s => !s)}
-                        className={`w-10 h-10 rounded-xl bg-black/70 backdrop-blur border flex items-center justify-center hover:scale-105 transition-all shadow-lg pointer-events-auto ${showTools ? "border-emerald-500/60 text-emerald-400" : "border-white/10 text-white/40"}`}
-                        title="Strumenti"
-                    >
-                        <Paintbrush className="w-5 h-5" />
+                    <button onClick={() => setShowTools(s => !s)} style={{ pointerEvents: "auto" }}
+                        className={`h-9 px-3 rounded-xl backdrop-blur border flex items-center gap-1.5 text-xs font-bold transition-all shadow-lg ${showTools ? "bg-emerald-500/30 border-emerald-500/60 text-emerald-300" : "bg-black/70 border-white/10 text-white/40 hover:bg-white/10"}`}
+                        title="Strumenti">
+                        <Paintbrush className="w-4 h-4" /> Strumenti
                     </button>
                 </div>
 
-                {showTools && ToolBar}
+                {/* Toolbar */}
+                {showTools && Toolbar}
             </div>
         </div>
     ) : null;
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Inline thumbnail ──────────────────────────────────────────────────────
     return (
         <div className={`flex flex-col items-center gap-2 ${className}`}>
             {label && (
                 <span className="text-[10px] font-black text-emerald-400/60 uppercase tracking-widest">{label}</span>
             )}
 
-            {/* Inline canvas container */}
             <div
-                className="relative rounded-2xl overflow-hidden border-2 border-[#3b2d6e] hover:border-emerald-500/40 transition-all shadow-2xl group touch-none bg-black/20"
-                style={{ width, height, cursor: tool === "pan" ? "grab" : "crosshair" }}
-                onPointerDown={e => { if (!isFullscreen) handleDown(e, inlineCanvasRef.current); }}
-                onPointerMove={e => { if (!isFullscreen) handleMove(e, inlineCanvasRef.current); }}
-                onPointerUp={e => { if (!isFullscreen) handleUp(e); }}
-                onPointerCancel={e => { if (!isFullscreen) handleUp(e); }}
-                onWheel={e => { if (!isFullscreen) handleWheel(e); }}
+                className="relative rounded-2xl overflow-hidden border-2 border-[#3b2d6e] hover:border-emerald-500/40 transition-all shadow-2xl group cursor-pointer bg-black/20"
+                style={{ width, height }}
+                onClick={() => setIsFullscreen(true)}
+                title="Clicca per disegnare"
             >
-                {/* Inline canvas — always in DOM, hidden when fullscreen */}
-                <div style={{
-                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                    transformOrigin: "0 0",
-                    width: canvasW, height: canvasH,
-                    position: "absolute", top: 0, left: 0,
-                    pointerEvents: "none",
-                    opacity: isFullscreen ? 0 : 1,  // keep in DOM but hide while fullscreen
-                }}>
-                    <canvas ref={inlineCanvasRef} className="block" />
+                {/* Inline canvas: CSS sized exactly to width×height */}
+                <canvas
+                    ref={inlineRef}
+                    style={{
+                        position: "absolute", inset: 0,
+                        width, height,
+                        display: "block",
+                        pointerEvents: "none",
+                    }}
+                />
+                {/* Hover hint */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-black/40 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-1">
+                        <Maximize2 className="w-6 h-6 text-purple-400" />
+                        <span className="text-[10px] font-bold text-purple-300">Disegna</span>
+                    </div>
                 </div>
-
-                {/* Expand button */}
-                <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110 shadow-lg"
-                    title="Apri a schermo intero per disegnare"
-                >
-                    <Maximize2 className="w-4 h-4" />
-                </button>
             </div>
 
-            {/* Fullscreen portal */}
-            {mounted && createPortal(fullscreenContent, document.body)}
+            {mounted && createPortal(portal, document.body)}
         </div>
     );
 }
