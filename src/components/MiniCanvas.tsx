@@ -4,7 +4,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { getStroke } from "perfect-freehand";
 import { getStorageKey } from "@/lib/storage";
-import { Trash2, Paintbrush, Eraser, Move } from "lucide-react";
+import { Trash2, Paintbrush, Eraser, Move, Maximize2, X } from "lucide-react";
 
 type Point = { x: number; y: number; pressure?: number };
 type MiniStroke = { color: string; size: number; points: Point[]; eraser: boolean };
@@ -46,6 +46,7 @@ export default function MiniCanvas({ storageKey, label, width = 300, height = 30
     const [color, setColor] = useState(COLORS[0]);
     const [size, setSize] = useState(8);
     const [showTools, setShowTools] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Zoom/Pan
     const [zoom, setZoom] = useState(1);
@@ -210,25 +211,53 @@ export default function MiniCanvas({ storageKey, label, width = 300, height = 30
         localStorage.removeItem(getStorageKey(storageKey));
     };
 
+    // ESC to exit fullscreen
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && isFullscreen) setIsFullscreen(false);
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
+    }, [isFullscreen]);
+
     return (
         <div className={`flex flex-col items-center gap-2 ${className}`}>
-            {label && <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{label}</span>}
+            {label && !isFullscreen && <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{label}</span>}
+
+            {/* Fullscreen backdrop */}
+            {isFullscreen && <div className="fixed inset-0 z-[90] bg-black/90 backdrop-blur-sm" onClick={() => setIsFullscreen(false)} />}
 
             <div
                 ref={containerRef}
-                className="relative rounded-xl overflow-hidden border-2 border-[#3b2d6e] hover:border-emerald-500/60 transition-colors shadow-xl group touch-none"
-                style={{ width, height, cursor: tool === "pan" ? "grab" : "crosshair" }}
+                className={`relative rounded-xl overflow-hidden border-2 transition-colors shadow-xl group touch-none ${
+                    isFullscreen
+                        ? "fixed inset-4 z-[95] border-emerald-500/40 shadow-[0_0_60px_rgba(16,185,129,0.2)]"
+                        : "border-[#3b2d6e] hover:border-emerald-500/60"
+                }`}
+                style={isFullscreen ? { width: "auto", height: "auto", cursor: tool === "pan" ? "grab" : "crosshair" } : { width, height, cursor: tool === "pan" ? "grab" : "crosshair" }}
                 onPointerDown={handleDown}
                 onPointerMove={handleMove}
                 onPointerUp={handleUp}
                 onPointerCancel={handleUp}
                 onWheel={handleWheel}
             >
+                {/* Dark canvas background in fullscreen */}
+                {isFullscreen && <div className="absolute inset-0 bg-[#0f0a1e]" />}
+
                 <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", width: withZoomPan ? width * 3 : width, height: withZoomPan ? height * 3 : height, position: "absolute", top: 0, left: 0 }}>
                     <canvas ref={canvasRef} className="block pointer-events-none" />
                 </div>
 
-                {/* Floating Tool Toggle */}
+                {/* Fullscreen Toggle — top-left */}
+                <button
+                    onClick={() => setIsFullscreen(f => !f)}
+                    className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110"
+                    title={isFullscreen ? "Esci schermo intero" : "Schermo intero"}
+                >
+                    {isFullscreen ? <X className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+
+                {/* Floating Tool Toggle — top-right */}
                 <button
                     onClick={() => setShowTools(!showTools)}
                     className="absolute top-2 right-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-emerald-400 border border-emerald-500/30 flex items-center justify-center opacity-60 group-hover:opacity-100 transition-all hover:bg-emerald-500/20 hover:scale-110"

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import ClickableImage from "@/components/ClickableImage";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStorageKey } from "@/lib/storage";
@@ -66,7 +66,7 @@ export default function EmanuelePage() {
 
                 {/* Dashboard Header */}
                 <div className="quest-card overflow-hidden mb-8 slide-up relative min-h-[300px] flex flex-col justify-end p-6 sm:p-10 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] rounded-2xl">
-                    <Image
+                    <ClickableImage
                         src={getAssetPath("/assets/game_designer_banner.png")}
                         alt="Game Design Laboratory"
                         fill
@@ -190,7 +190,7 @@ export default function EmanuelePage() {
                             style={{ animationDelay: "0.5s" }}
                         >
                             <div className="w-full h-[180px] relative bg-black/80">
-                                <Image src={getAssetPath("/assets/game_designer_workbook_cover.png")} alt="Manuale del Game Designer" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
+                                <ClickableImage src={getAssetPath("/assets/game_designer_workbook_cover.png")} alt="Manuale del Game Designer" fill className="object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--quest-card)] via-transparent to-transparent pointer-events-none" />
                             </div>
                             <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col items-center">

@@ -62,3 +62,6 @@ design-system/
 *.docx
 *.xlsx
 *.pptx
+
+# ─── Generalized version (standalone project) ─────────────────────────────
+kids_game_workshop/

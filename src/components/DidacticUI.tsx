@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, ReactNode } from "react";
-import NextImage from "next/image";
+import ClickableImage from "@/components/ClickableImage";
 import { getAssetPath } from "@/lib/utils";
 
 interface DidacticTooltipProps {
@@ -87,7 +87,7 @@ export function ExamplePanel({ title, imageSrc, imageAlt, children }: ExamplePan
             <div className={`transition-all duration-500 overflow-hidden ${isOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}`}>
                 <div className="px-4 pb-4">
                     <div className="relative w-full rounded-xl border border-purple-500/20 bg-black/30 flex justify-center p-2 min-h-[100px]">
-                        <NextImage
+                        <ClickableImage
                             src={getAssetPath(imageSrc)}
                             alt={imageAlt}
                             width={800}
