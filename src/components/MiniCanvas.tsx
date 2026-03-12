@@ -115,7 +115,7 @@ export default function MiniCanvas({
             ctx.scale(dpr, dpr);
         }
         drawStrokes(ctx, current ? [...strokes, current] : strokes, canvasW, canvasH, grid);
-    }, [strokes, current, canvasW, canvasH, grid]);
+    }, [strokes, current, canvasW, canvasH, grid, isFullscreen]); // redraw when ref moves
 
     useEffect(() => { redraw(); }, [redraw]);
 
@@ -129,41 +129,52 @@ export default function MiniCanvas({
 
     // Lock body scroll in fullscreen
     useEffect(() => {
-        document.body.style.overflow = isFullscreen ? "hidden" : "";
-        return () => { document.body.style.overflow = ""; };
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = isFullscreen ? "hidden" : "";
+        }
+        return () => { if (typeof document !== "undefined") document.body.style.overflow = ""; };
     }, [isFullscreen]);
 
-    // Pointer helpers
-    const getPoint = useCallback((e: React.PointerEvent, el: HTMLElement): Point => {
+    // Pointer point calculation
+    const calculatePoint = (e: React.PointerEvent, el: HTMLElement): Point => {
         const rect = el.getBoundingClientRect();
         return {
             x: (e.clientX - rect.left - pan.x) / zoom,
             y: (e.clientY - rect.top - pan.y) / zoom,
             pressure: e.pressure,
         };
-    }, [zoom, pan]);
+    };
 
     const handleDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        // Only trigger on main canvas area clicks, not on buttons/UI
+        if ((e.target as HTMLElement).closest('button')) return;
+
         e.preventDefault();
-        (e.target as Element).setPointerCapture?.(e.pointerId);
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+
         if (tool === "pan" && withZoomPan) {
             panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
             return;
         }
+
+        const pt = calculatePoint(e, e.currentTarget);
         setDrawing(true);
-        setCurrent({ color, size, points: [getPoint(e, e.currentTarget)], eraser: tool === "eraser" });
-    }, [tool, color, size, getPoint, withZoomPan, pan]);
+        setCurrent({ color, size, points: [pt], eraser: tool === "eraser" });
+    }, [tool, color, size, withZoomPan, pan, zoom]);
 
     const handleMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         if (tool === "pan" && panStart.current) {
             setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
             return;
         }
-        if (!drawing || !current) return;
-        setCurrent(prev => prev ? { ...prev, points: [...prev.points, getPoint(e, e.currentTarget)] } : prev);
-    }, [drawing, current, getPoint, tool]);
+        if (!drawing) return;
+        
+        const pt = calculatePoint(e, e.currentTarget);
+        setCurrent(prev => prev ? { ...prev, points: [...prev.points, pt] } : prev);
+    }, [drawing, tool, zoom, pan]);
 
-    const handleUp = useCallback(() => {
+    const handleUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
         if (panStart.current) { panStart.current = null; return; }
         if (current && current.points.length > 1) setStrokes(prev => [...prev, current]);
         setCurrent(null);
@@ -182,9 +193,9 @@ export default function MiniCanvas({
         localStorage.removeItem(getStorageKey(storageKey));
     }, [storageKey]);
 
-    // ── Shared toolbar (used in both modes) ──────────────────────────────
+    // ── Shared toolbar ───────────────────────────────────────────────────
     const ToolBar = (
-        <div className="absolute bottom-3 left-3 right-3 z-20 bg-black/85 backdrop-blur-xl p-2.5 rounded-xl border border-emerald-500/30 flex flex-wrap gap-2 items-center justify-center shadow-2xl">
+        <div className="absolute bottom-3 left-3 right-3 z-30 bg-black/85 backdrop-blur-xl p-2.5 rounded-xl border border-emerald-500/30 flex flex-wrap gap-2 items-center justify-center shadow-2xl">
             <button onClick={() => setTool("brush")} className={`p-1.5 rounded-lg ${tool === "brush" ? "bg-emerald-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10"}`}><Paintbrush className="w-4 h-4" /></button>
             <button onClick={() => setTool("eraser")} className={`p-1.5 rounded-lg ${tool === "eraser" ? "bg-pink-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10"}`}><Eraser className="w-4 h-4" /></button>
             {withZoomPan && <button onClick={() => setTool("pan")} className={`p-1.5 rounded-lg ${tool === "pan" ? "bg-blue-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10"}`}><Move className="w-4 h-4" /></button>}
@@ -197,14 +208,11 @@ export default function MiniCanvas({
         </div>
     );
 
-    // ── Fullscreen portal — rendered into document.body ──────────────────
-    const FullscreenPortal = mounted && isFullscreen ? createPortal(
-        <div
-            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#08051a" }}
-        >
-            {/* Drawing surface */}
+    // ── Fullscreen portal content ─────────────────────────────────────────
+    const fullscreenContent = isFullscreen ? (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#08051a", display: "flex", flexDirection: "column" }}>
             <div
-                className="absolute inset-0 touch-none"
+                className="relative flex-1 touch-none overflow-hidden"
                 style={{ cursor: tool === "pan" ? "grab" : "crosshair" }}
                 onPointerDown={handleDown}
                 onPointerMove={handleMove}
@@ -212,37 +220,39 @@ export default function MiniCanvas({
                 onPointerCancel={handleUp}
                 onWheel={handleWheel}
             >
-                {/* Canvas centered */}
-                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                    <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}>
+                {/* Canvas central container */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div style={{ 
+                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, 
+                        transformOrigin: "center center",
+                        width: canvasW,
+                        height: canvasH
+                    }}>
                         <canvas ref={canvasRef} className="block pointer-events-none" />
                     </div>
                 </div>
 
-                {/* Minimize — top left */}
+                {/* UI Buttons */}
                 <button
                     onClick={() => setIsFullscreen(false)}
-                    className="absolute top-4 left-4 z-10 w-10 h-10 rounded-xl bg-black/70 backdrop-blur border border-purple-500/40 text-purple-400 flex items-center justify-center hover:bg-purple-500/20 hover:scale-105 transition-all shadow-lg"
+                    className="absolute top-4 left-4 z-40 w-10 h-10 rounded-xl bg-black/70 backdrop-blur border border-purple-500/40 text-purple-400 flex items-center justify-center hover:bg-purple-500/20 hover:scale-105 transition-all shadow-lg"
                     title="Esci schermo intero (ESC)"
                 >
                     <Minimize2 className="w-5 h-5" />
                 </button>
 
-                {/* Tools toggle — top right */}
                 <button
                     onClick={() => setShowTools(s => !s)}
-                    className="absolute top-4 right-4 z-10 w-10 h-10 rounded-xl bg-black/70 backdrop-blur border border-emerald-500/40 text-emerald-400 flex items-center justify-center hover:bg-emerald-500/20 hover:scale-105 transition-all shadow-lg"
+                    className="absolute top-4 right-4 z-40 w-10 h-10 rounded-xl bg-black/70 backdrop-blur border border-emerald-500/40 text-emerald-400 flex items-center justify-center hover:bg-emerald-500/20 hover:scale-105 transition-all shadow-lg"
                 >
                     <Paintbrush className="w-5 h-5" />
                 </button>
 
                 {showTools && ToolBar}
             </div>
-        </div>,
-        document.body
+        </div>
     ) : null;
 
-    // ── Inline (normal) canvas ────────────────────────────────────────────
     return (
         <div className={`flex flex-col items-center gap-2 ${className}`}>
             {label && <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{label}</span>}
@@ -251,52 +261,54 @@ export default function MiniCanvas({
                 ref={containerRef}
                 className="relative rounded-xl overflow-hidden border-2 border-[#3b2d6e] hover:border-emerald-500/60 transition-colors shadow-xl group touch-none"
                 style={{ width, height, cursor: tool === "pan" ? "grab" : "crosshair" }}
-                onPointerDown={handleDown}
-                onPointerMove={handleMove}
-                onPointerUp={handleUp}
-                onPointerCancel={handleUp}
-                onWheel={handleWheel}
+                onPointerDown={isFullscreen ? undefined : handleDown}
+                onPointerMove={isFullscreen ? undefined : handleMove}
+                onPointerUp={isFullscreen ? undefined : handleUp}
+                onPointerCancel={isFullscreen ? undefined : handleUp}
+                onWheel={isFullscreen ? undefined : handleWheel}
             >
-                {/* Canvas content */}
-                <div style={{
-                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                    transformOrigin: "0 0",
-                    width: canvasW,
-                    height: canvasH,
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                }}>
-                    {/* Hide canvas element when fullscreen (portal uses same ref) */}
-                    <canvas
-                        ref={canvasRef}
-                        className="block pointer-events-none"
-                        style={{ visibility: isFullscreen ? "hidden" : "visible" }}
-                    />
-                </div>
+                {!isFullscreen && (
+                    <div style={{
+                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                        transformOrigin: "0 0",
+                        width: canvasW,
+                        height: canvasH,
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                    }}>
+                        <canvas
+                            ref={canvasRef}
+                            className="block pointer-events-none"
+                        />
+                    </div>
+                )}
 
-                {/* Fullscreen button — top left */}
-                <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110"
-                    title="Schermo intero"
-                >
-                    <Maximize2 className="w-4 h-4" />
-                </button>
+                {/* Inline UI Buttons */}
+                {!isFullscreen && (
+                    <>
+                        <button
+                            onClick={() => setIsFullscreen(true)}
+                            className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110"
+                            title="Schermo intero"
+                        >
+                            <Maximize2 className="w-4 h-4" />
+                        </button>
 
-                {/* Tools toggle — top right */}
-                <button
-                    onClick={() => setShowTools(s => !s)}
-                    className="absolute top-2 right-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-emerald-400 border border-emerald-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500/20 hover:scale-110"
-                >
-                    <Paintbrush className="w-4 h-4" />
-                </button>
+                        <button
+                            onClick={() => setShowTools(s => !s)}
+                            className="absolute top-2 right-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-emerald-400 border border-emerald-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500/20 hover:scale-110"
+                        >
+                            <Paintbrush className="w-4 h-4" />
+                        </button>
 
-                {showTools && !isFullscreen && ToolBar}
+                        {showTools && ToolBar}
+                    </>
+                )}
             </div>
 
-            {/* Fullscreen portal — injected into document.body, outside all layouts */}
-            {FullscreenPortal}
+            {/* Portal for fullscreen */}
+            {mounted && isFullscreen && createPortal(fullscreenContent, document.body)}
         </div>
     );
 }
