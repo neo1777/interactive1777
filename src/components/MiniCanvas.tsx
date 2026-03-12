@@ -31,7 +31,7 @@ const COLORS = [
 // ── Brush preset settings for perfect-freehand ────────────────────────────────
 const BRUSH_OPTIONS: Record<BrushPreset, Parameters<typeof getStroke>[1]> = {
     pencil: {
-        size: 1, // overridden per stroke
+        size: 1,
         thinning: 0.7,
         smoothing: 0.3,
         streamline: 0.3,
@@ -65,9 +65,8 @@ const BRUSH_OPTIONS: Record<BrushPreset, Parameters<typeof getStroke>[1]> = {
     },
 };
 
-// ── SVG path from perfect-freehand outline ────────────────────────────────────
 function svgPath(stroke: number[][]): string {
-    if (!stroke.length) return "";
+    if (stroke.length < 2) return "";
     try {
         const d = stroke.reduce(
             (acc: (string | number)[], [x0, y0]: number[], i: number, arr: number[][]) => {
@@ -84,7 +83,6 @@ function svgPath(stroke: number[][]): string {
     }
 }
 
-// ── Draw all strokes onto canvas context ──────────────────────────────────────
 function drawStrokes(
     ctx: CanvasRenderingContext2D,
     allStrokes: MiniStroke[],
@@ -94,7 +92,6 @@ function drawStrokes(
 ) {
     try {
         ctx.clearRect(0, 0, w, h);
-
         if (grid) {
             ctx.save();
             ctx.strokeStyle = "rgba(255,255,255,0.06)";
@@ -107,40 +104,31 @@ function drawStrokes(
             }
             ctx.restore();
         }
-
         for (const s of allStrokes) {
             if (!s?.points || s.points.length < 2) continue;
-
             const opts = {
                 ...BRUSH_OPTIONS[s.preset || "marker"],
                 size: s.size,
-                simulatePressure: s.points.every(p => (p.pressure ?? 0) === 0),
+                simulatePressure: s.points.every(p => (p.pressure ?? 0.5) === 0.5),
             };
-
             const outline = getStroke(s.points, opts);
             const pathData = svgPath(outline);
             if (!pathData) continue;
-
             ctx.save();
-            ctx.globalAlpha = s.eraser ? 1 : (s.opacity ?? 1);
-
             if (s.eraser) {
                 ctx.globalCompositeOperation = "destination-out";
+                ctx.globalAlpha = 1;
                 ctx.fillStyle = "rgba(0,0,0,1)";
             } else if (s.preset === "highlighter") {
                 ctx.globalCompositeOperation = "source-over";
-                ctx.fillStyle = s.color;
                 ctx.globalAlpha = (s.opacity ?? 1) * 0.45;
+                ctx.fillStyle = s.color;
             } else {
                 ctx.globalCompositeOperation = "source-over";
+                ctx.globalAlpha = s.opacity ?? 1;
                 ctx.fillStyle = s.color;
             }
-
-            try {
-                ctx.fill(new Path2D(pathData));
-            } catch {
-                // ignore bad path
-            }
+            try { ctx.fill(new Path2D(pathData)); } catch { /* ignore */ }
             ctx.restore();
         }
     } catch (err) {
@@ -148,7 +136,22 @@ function drawStrokes(
     }
 }
 
-// ── Component props ───────────────────────────────────────────────────────────
+/** Setup canvas DPR and scale — returns true if resized */
+function setupCanvas(canvas: HTMLCanvasElement, w: number, h: number) {
+    const dpr = window.devicePixelRatio || 1;
+    const needsResize = canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr);
+    if (needsResize) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.scale(dpr, dpr);
+    }
+    return needsResize;
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 interface MiniCanvasProps {
     storageKey: string;
     label?: string;
@@ -165,17 +168,17 @@ export default function MiniCanvas({
     storageKey, label, width = 300, height = 300,
     className = "", withZoomPan = false, grid,
 }: MiniCanvasProps) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+    // Two separate canvas refs: one inline, one for the fullscreen portal
+    const inlineCanvasRef = useRef<HTMLCanvasElement>(null);
+    const fullCanvasRef = useRef<HTMLCanvasElement>(null);
 
-    // ── Drawing state ─────────────────────────────────────────────────────────
+    // Drawing state
     const [strokes, setStrokes] = useState<MiniStroke[]>([]);
     const [past, setPast] = useState<MiniStroke[][]>([]);
     const [future, setFuture] = useState<MiniStroke[][]>([]);
     const [current, setCurrent] = useState<MiniStroke | null>(null);
-    const [drawing, setDrawing] = useState(false);
 
-    // ── Tool state ────────────────────────────────────────────────────────────
+    // Tool state
     const [preset, setPreset] = useState<BrushPreset>("marker");
     const [tool, setTool] = useState<"draw" | "eraser" | "pan">("draw");
     const [color, setColor] = useState(COLORS[0]);
@@ -185,7 +188,7 @@ export default function MiniCanvas({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
-    // ── Pan/zoom ──────────────────────────────────────────────────────────────
+    // Pan/zoom (CSS only, no coordinate transform)
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const panStart = useRef<{ x: number; y: number } | null>(null);
@@ -233,7 +236,7 @@ export default function MiniCanvas({
     // ── Keyboard shortcuts ────────────────────────────────────────────────────
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && isFullscreen) { setIsFullscreen(false); return; }
+            if (e.key === "Escape" && isFullscreen) { setIsFullscreen(false); setShowTools(false); return; }
             if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
             if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
         };
@@ -241,85 +244,87 @@ export default function MiniCanvas({
         return () => window.removeEventListener("keydown", onKey);
     }, [isFullscreen, undo, redo]);
 
-    // ── Body scroll lock in fullscreen ────────────────────────────────────────
+    // ── Body scroll lock ──────────────────────────────────────────────────────
     useEffect(() => {
         document.body.style.overflow = isFullscreen ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
     }, [isFullscreen]);
 
-    // ── Redraw ────────────────────────────────────────────────────────────────
+    // ── Redraw BOTH canvases from state ───────────────────────────────────────
     const redraw = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        const dpr = window.devicePixelRatio || 1;
-        if (canvas.width !== canvasW * dpr || canvas.height !== canvasH * dpr) {
-            canvas.width = canvasW * dpr;
-            canvas.height = canvasH * dpr;
-            canvas.style.width = `${canvasW}px`;
-            canvas.style.height = `${canvasH}px`;
-            ctx.scale(dpr, dpr);
+        const all = current ? [...strokes, current] : strokes;
+
+        // Inline canvas
+        const ic = inlineCanvasRef.current;
+        if (ic) {
+            setupCanvas(ic, canvasW, canvasH);
+            const ctx = ic.getContext("2d");
+            if (ctx) drawStrokes(ctx, all, canvasW, canvasH, grid);
         }
-        drawStrokes(ctx, current ? [...strokes, current] : strokes, canvasW, canvasH, grid);
+
+        // Fullscreen canvas (only if it's mounted in the portal)
+        const fc = fullCanvasRef.current;
+        if (fc) {
+            setupCanvas(fc, canvasW, canvasH);
+            const ctx = fc.getContext("2d");
+            if (ctx) drawStrokes(ctx, all, canvasW, canvasH, grid);
+        }
     }, [strokes, current, canvasW, canvasH, grid]);
 
     useEffect(() => { if (mounted) redraw(); }, [redraw, mounted]);
 
-    // ── Pointer helpers ───────────────────────────────────────────────────────
-    const getPoint = (e: React.PointerEvent, el: HTMLElement): Point => {
-        const rect = el.getBoundingClientRect();
+    // ── Point calculation: use the canvas element's OWN visual bounding rect ──
+    const getPoint = useCallback((e: React.PointerEvent, canvasEl: HTMLCanvasElement | null): Point => {
+        if (!canvasEl) return { x: 0, y: 0, pressure: 0.5 };
+        const rect = canvasEl.getBoundingClientRect();
+        // getBoundingClientRect accounts for CSS transform (zoom), so divide by zoom
         return {
-            x: (e.clientX - rect.left - pan.x) / zoom,
-            y: (e.clientY - rect.top - pan.y) / zoom,
+            x: (e.clientX - rect.left) / zoom,
+            y: (e.clientY - rect.top) / zoom,
             pressure: e.pressure > 0 ? e.pressure : 0.5,
         };
-    };
+    }, [zoom]);
 
-    const handleDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const handleDown = useCallback((e: React.PointerEvent<HTMLDivElement>, canvasEl: HTMLCanvasElement | null) => {
         if ((e.target as HTMLElement).closest("button,input")) return;
-        const el = e.currentTarget;
         e.preventDefault();
-        try { el.setPointerCapture(e.pointerId); } catch { /* ok */ }
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ok */ }
 
         if (tool === "pan" && withZoomPan) {
             panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
             return;
         }
-
-        const pt = getPoint(e, el);
-        setDrawing(true);
+        const pt = getPoint(e, canvasEl);
         setCurrent({
-            color,
-            size,
-            opacity,
+            color, size, opacity,
             preset: tool === "eraser" ? "marker" : preset,
             points: [pt],
             eraser: tool === "eraser",
         });
-    }, [tool, color, size, opacity, preset, withZoomPan, pan, zoom]);
+    }, [tool, color, size, opacity, preset, withZoomPan, pan, getPoint]);
 
-    const handleMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const handleMove = useCallback((e: React.PointerEvent<HTMLDivElement>, canvasEl: HTMLCanvasElement | null) => {
         if (tool === "pan" && panStart.current) {
             setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
             return;
         }
-        if (!drawing || !e.currentTarget) return;
-        const pt = getPoint(e, e.currentTarget);
+        if (!current) return;
+        const pt = getPoint(e, canvasEl);
         setCurrent(prev => prev ? { ...prev, points: [...prev.points, pt] } : prev);
-    }, [drawing, tool, zoom, pan]);
+    }, [current, tool, getPoint]);
 
     const handleUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         try { e.currentTarget?.releasePointerCapture(e.pointerId); } catch { /* ok */ }
         panStart.current = null;
-        if (current && current.points.length > 1) {
-            setPast(p => [...p, strokes].slice(-MAX_HISTORY));
-            setFuture([]);
-            setStrokes(prev => [...prev, current]);
-        }
-        setCurrent(null);
-        setDrawing(false);
-    }, [current, strokes]);
+        setCurrent(prev => {
+            if (prev && prev.points.length > 1) {
+                setPast(p => [...p, strokes].slice(-MAX_HISTORY));
+                setFuture([]);
+                setStrokes(s => [...s, prev]);
+            }
+            return null;
+        });
+    }, [strokes]);
 
     const handleWheel = useCallback((e: React.WheelEvent) => {
         if (!withZoomPan) return;
@@ -335,156 +340,89 @@ export default function MiniCanvas({
         try { localStorage.removeItem(getStorageKey(storageKey)); } catch { /* ok */ }
     }, [strokes, storageKey]);
 
-    // ── Toolbar ───────────────────────────────────────────────────────────────
+    // ── Toolbar (only shown in fullscreen) ────────────────────────────────────
     const ToolBar = (
         <div className="absolute bottom-3 left-3 right-3 z-30 bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-            {/* Row 1: Tools + undo/redo */}
+            {/* Row 1: Tools */}
             <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-white/5 flex-wrap">
-                {/* Brush presets */}
-                <button
-                    onClick={() => { setPreset("pencil"); setTool("draw"); }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${preset === "pencil" && tool === "draw" ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border border-transparent"}`}
-                    title="Matita (linea fine, con pressione)"
-                >
+                <button onClick={() => { setPreset("pencil"); setTool("draw"); }}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${preset === "pencil" && tool === "draw" ? "bg-amber-500/30 text-amber-300 border-amber-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border-transparent"}`}
+                    title="Matita — tratto sottile con pressione">
                     <Pencil className="w-3.5 h-3.5" /> Matita
                 </button>
-                <button
-                    onClick={() => { setPreset("marker"); setTool("draw"); }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${preset === "marker" && tool === "draw" ? "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border border-transparent"}`}
-                    title="Pennarello (linea uniforme)"
-                >
+                <button onClick={() => { setPreset("marker"); setTool("draw"); }}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${preset === "marker" && tool === "draw" ? "bg-emerald-500/30 text-emerald-300 border-emerald-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border-transparent"}`}
+                    title="Pennarello — tratto uniforme">
                     <Paintbrush className="w-3.5 h-3.5" /> Marker
                 </button>
-                <button
-                    onClick={() => { setPreset("highlighter"); setTool("draw"); }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${preset === "highlighter" && tool === "draw" ? "bg-yellow-500/30 text-yellow-300 border border-yellow-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border border-transparent"}`}
-                    title="Evidenziatore (semitrasparente)"
-                >
-                    <Highlighter className="w-3.5 h-3.5" /> Marker
+                <button onClick={() => { setPreset("highlighter"); setTool("draw"); }}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${preset === "highlighter" && tool === "draw" ? "bg-yellow-500/30 text-yellow-300 border-yellow-500/40" : "bg-white/5 text-white/50 hover:bg-white/10 border-transparent"}`}
+                    title="Evidenziatore — semitrasparente">
+                    <Highlighter className="w-3.5 h-3.5" /> Evidenz.
                 </button>
-
                 <div className="w-px h-5 bg-white/10 mx-0.5" />
-
-                <button
-                    onClick={() => setTool("eraser")}
-                    className={`p-1.5 rounded-lg transition-all ${tool === "eraser" ? "bg-pink-600/40 text-pink-300 border border-pink-500/40" : "bg-white/5 text-white/40 hover:bg-white/10 border border-transparent"}`}
-                    title="Gomma (E)"
-                >
-                    <Eraser className="w-4 h-4" />
+                <button onClick={() => setTool("eraser")}
+                    className={`p-1.5 rounded-lg transition-all border ${tool === "eraser" ? "bg-pink-600/40 text-pink-300 border-pink-500/40" : "bg-white/5 text-white/40 hover:bg-white/10 border-transparent"}`}
+                    title="Gomma"><Eraser className="w-4 h-4" />
                 </button>
-
                 {withZoomPan && (
-                    <button
-                        onClick={() => setTool("pan")}
-                        className={`p-1.5 rounded-lg transition-all ${tool === "pan" ? "bg-blue-600/40 text-blue-300 border border-blue-500/40" : "bg-white/5 text-white/40 hover:bg-white/10 border border-transparent"}`}
-                        title="Sposta (H)"
-                    >
-                        <Move className="w-4 h-4" />
+                    <button onClick={() => setTool("pan")}
+                        className={`p-1.5 rounded-lg transition-all border ${tool === "pan" ? "bg-blue-600/40 text-blue-300 border-blue-500/40" : "bg-white/5 text-white/40 hover:bg-white/10 border-transparent"}`}
+                        title="Sposta"><Move className="w-4 h-4" />
                     </button>
                 )}
-
                 <div className="w-px h-5 bg-white/10 mx-0.5" />
-
-                {/* Undo / Redo */}
-                <button
-                    onClick={undo}
-                    disabled={!past.length}
-                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all border border-transparent"
-                    title="Annulla (Ctrl+Z)"
-                >
-                    <Undo2 className="w-4 h-4" />
+                <button onClick={undo} disabled={!past.length}
+                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                    title="Annulla (Ctrl+Z)"><Undo2 className="w-4 h-4" />
                 </button>
-                <button
-                    onClick={redo}
-                    disabled={!future.length}
-                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all border border-transparent"
-                    title="Ripeti (Ctrl+Shift+Z)"
-                >
-                    <Redo2 className="w-4 h-4" />
+                <button onClick={redo} disabled={!future.length}
+                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                    title="Ripeti (Ctrl+Shift+Z)"><Redo2 className="w-4 h-4" />
                 </button>
-
                 <div className="w-px h-5 bg-white/10 mx-0.5" />
-
-                <button
-                    onClick={clearAll}
-                    className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-all border border-transparent"
-                    title="Cancella tutto"
-                >
-                    <Trash2 className="w-4 h-4" />
+                <button onClick={clearAll}
+                    className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-all"
+                    title="Cancella tutto"><Trash2 className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Row 2: Colors + size + opacity */}
             <div className="px-3 py-2.5 flex flex-wrap gap-2 items-center">
-                {/* Color swatches */}
                 <div className="flex flex-wrap gap-1 flex-1">
                     {COLORS.map(c => (
-                        <button
-                            key={c}
-                            onClick={() => { setColor(c); if (tool === "eraser") setTool("draw"); }}
-                            className="relative rounded-full transition-all hover:scale-110"
+                        <button key={c} onClick={() => { setColor(c); if (tool === "eraser") setTool("draw"); }}
+                            className="rounded-full transition-all hover:scale-110"
                             style={{
-                                width: 18, height: 18,
+                                width: 20, height: 20,
                                 background: c,
-                                outline: color === c ? `2px solid white` : "2px solid transparent",
+                                outline: color === c ? "2px solid white" : "2px solid transparent",
                                 outlineOffset: 1,
                                 boxShadow: color === c ? "0 0 8px rgba(255,255,255,0.6)" : "none",
                                 border: c === "#ffffff" ? "1px solid rgba(255,255,255,0.2)" : "none",
-                            }}
-                            title={c}
-                        />
+                            }} title={c} />
                     ))}
-                    <input
-                        type="color"
-                        value={color}
+                    <input type="color" value={color}
                         onChange={e => { setColor(e.target.value); if (tool === "eraser") setTool("draw"); }}
-                        className="w-[18px] h-[18px] rounded-full overflow-hidden p-0 bg-transparent border-0 cursor-pointer"
-                        title="Colore personalizzato"
-                    />
+                        className="w-5 h-5 rounded-full overflow-hidden p-0 bg-transparent border-0 cursor-pointer"
+                        title="Colore personalizzato" />
                 </div>
-
-                <div className="flex flex-col gap-1 min-w-[80px]">
-                    {/* Size */}
+                <div className="flex flex-col gap-1.5 min-w-[90px]">
                     <div className="flex items-center gap-2">
-                        {/* preview dot */}
-                        <div
-                            className="rounded-full bg-white/70 shrink-0"
-                            style={{ width: Math.max(4, Math.min(16, size * 0.7)), height: Math.max(4, Math.min(16, size * 0.7)) }}
-                        />
-                        <input
-                            type="range" min="2" max="60" value={size}
+                        <div className="rounded-full bg-white/70 shrink-0"
+                            style={{ width: Math.max(4, Math.min(16, size * 0.7)), height: Math.max(4, Math.min(16, size * 0.7)) }} />
+                        <input type="range" min="2" max="60" value={size}
                             onChange={e => setSize(Number(e.target.value))}
-                            className="flex-1 h-1 accent-emerald-400"
-                            title={`Dimensione: ${size}px`}
-                        />
+                            className="flex-1 h-1 accent-emerald-400" title={`Dimensione: ${size}px`} />
                     </div>
-                    {/* Opacity (hidden for eraser/highlighter uses its own) */}
                     <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-white/30 w-4 text-right">{Math.round(opacity * 100)}%</span>
-                        <input
-                            type="range" min="5" max="100" value={Math.round(opacity * 100)}
+                        <span className="text-[9px] text-white/30 w-6 text-right">{Math.round(opacity * 100)}%</span>
+                        <input type="range" min="5" max="100" value={Math.round(opacity * 100)}
                             onChange={e => setOpacity(Number(e.target.value) / 100)}
-                            className="flex-1 h-1 accent-purple-400"
-                            title={`Opacità: ${Math.round(opacity * 100)}%`}
-                        />
+                            className="flex-1 h-1 accent-purple-400" title={`Opacità: ${Math.round(opacity * 100)}%`} />
                     </div>
                 </div>
             </div>
-        </div>
-    );
-
-    // ── Canvas wrapper (shared between inline and fullscreen) ─────────────────
-    const CanvasWrapper = (
-        <div style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: "0 0",
-            width: canvasW,
-            height: canvasH,
-            position: "absolute",
-            top: 0,
-            left: 0,
-        }} className="pointer-events-none">
-            <canvas ref={canvasRef} className="block" />
         </div>
     );
 
@@ -497,20 +435,32 @@ export default function MiniCanvas({
             <div
                 className="relative flex-1 touch-none overflow-hidden"
                 style={{ cursor: tool === "pan" ? "grab" : "crosshair" }}
-                onPointerDown={handleDown}
-                onPointerMove={handleMove}
+                onPointerDown={e => handleDown(e, fullCanvasRef.current)}
+                onPointerMove={e => handleMove(e, fullCanvasRef.current)}
                 onPointerUp={handleUp}
                 onPointerCancel={handleUp}
                 onWheel={handleWheel}
             >
-                <div className="absolute inset-0 overflow-hidden">
-                    {CanvasWrapper}
+                {/* Centered canvas backdrop */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/20"
+                        style={{ width: canvasW, height: canvasH }}>
+                        <div style={{
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                            transformOrigin: "0 0",
+                            width: canvasW,
+                            height: canvasH,
+                            position: "absolute",
+                        }}>
+                            <canvas ref={fullCanvasRef} className="block" />
+                        </div>
+                    </div>
                 </div>
 
-                {/* Top bar */}
+                {/* Top controls */}
                 <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-start pointer-events-none">
                     <button
-                        onClick={() => setIsFullscreen(false)}
+                        onClick={() => { setIsFullscreen(false); setShowTools(false); }}
                         className="w-10 h-10 rounded-xl bg-black/70 backdrop-blur border border-purple-500/40 text-purple-400 flex items-center justify-center hover:bg-purple-500/20 hover:scale-105 transition-all shadow-lg pointer-events-auto"
                         title="Esci (ESC)"
                     >
@@ -537,30 +487,40 @@ export default function MiniCanvas({
                 <span className="text-[10px] font-black text-emerald-400/60 uppercase tracking-widest">{label}</span>
             )}
 
+            {/* Inline canvas container */}
             <div
-                ref={containerRef}
                 className="relative rounded-2xl overflow-hidden border-2 border-[#3b2d6e] hover:border-emerald-500/40 transition-all shadow-2xl group touch-none bg-black/20"
                 style={{ width, height, cursor: tool === "pan" ? "grab" : "crosshair" }}
-                onPointerDown={isFullscreen ? undefined : handleDown}
-                onPointerMove={isFullscreen ? undefined : handleMove}
-                onPointerUp={isFullscreen ? undefined : handleUp}
-                onPointerCancel={isFullscreen ? undefined : handleUp}
-                onWheel={isFullscreen ? undefined : handleWheel}
+                onPointerDown={e => { if (!isFullscreen) handleDown(e, inlineCanvasRef.current); }}
+                onPointerMove={e => { if (!isFullscreen) handleMove(e, inlineCanvasRef.current); }}
+                onPointerUp={e => { if (!isFullscreen) handleUp(e); }}
+                onPointerCancel={e => { if (!isFullscreen) handleUp(e); }}
+                onWheel={e => { if (!isFullscreen) handleWheel(e); }}
             >
-                {!isFullscreen && CanvasWrapper}
+                {/* Inline canvas — always in DOM, hidden when fullscreen */}
+                <div style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    transformOrigin: "0 0",
+                    width: canvasW, height: canvasH,
+                    position: "absolute", top: 0, left: 0,
+                    pointerEvents: "none",
+                    opacity: isFullscreen ? 0 : 1,  // keep in DOM but hide while fullscreen
+                }}>
+                    <canvas ref={inlineCanvasRef} className="block" />
+                </div>
 
-                {!isFullscreen && (
-                    <button
-                        onClick={() => setIsFullscreen(true)}
-                        className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110 shadow-lg"
-                        title="Apri a schermo intero per disegnare"
-                    >
-                        <Maximize2 className="w-4 h-4" />
-                    </button>
-                )}
+                {/* Expand button */}
+                <button
+                    onClick={() => setIsFullscreen(true)}
+                    className="absolute top-2 left-2 z-20 w-8 h-8 rounded-lg bg-black/60 backdrop-blur text-purple-400 border border-purple-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-purple-500/20 hover:scale-110 shadow-lg"
+                    title="Apri a schermo intero per disegnare"
+                >
+                    <Maximize2 className="w-4 h-4" />
+                </button>
             </div>
 
-            {mounted && isFullscreen && createPortal(fullscreenContent, document.body)}
+            {/* Fullscreen portal */}
+            {mounted && createPortal(fullscreenContent, document.body)}
         </div>
     );
 }
