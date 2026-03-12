@@ -71,9 +71,9 @@ export default function PersonaggiPage() {
         });
     }, []);
 
-    useEffect(() => { localStorage.setItem(getStorageKey("iq_hero"), JSON.stringify(hero)); }, [hero]);
-    useEffect(() => { localStorage.setItem(getStorageKey("iq_enemies"), JSON.stringify(enemies)); }, [enemies]);
-    useEffect(() => { localStorage.setItem(getStorageKey("iq_friends"), JSON.stringify(friends)); }, [friends]);
+    useEffect(() => { try { localStorage.setItem(getStorageKey("iq_hero"), JSON.stringify(hero)); } catch(e){} }, [hero]);
+    useEffect(() => { try { localStorage.setItem(getStorageKey("iq_enemies"), JSON.stringify(enemies)); } catch(e){} }, [enemies]);
+    useEffect(() => { try { localStorage.setItem(getStorageKey("iq_friends"), JSON.stringify(friends)); } catch(e){} }, [friends]);
 
     const heroHasDrawing = typeof window !== "undefined" && DIRECTIONS.some(d => localStorage.getItem(getStorageKey(`iq_hero_${d.key}`)));
     const enemiesHaveDrawing = typeof window !== "undefined" && ENEMIES.some(en => localStorage.getItem(getStorageKey(`iq_enemy_${en.key}`)));

@@ -13,8 +13,8 @@ export function getAssetPath(path: string): string {
     // Ensure the path starts with a slash
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
 
-    // In development (local), we don't need the prefix if we are running at root
-    // But for consistency with GH Pages build, we should typically have them match
-    // Next.js basePath handles this in dev too if configured.
-    return `${prefix}${cleanPath}`;
+    // In development and for Next.js components (Link/Image), the prefix is often handled automatically.
+    // This utility is mainly for raw <img> tags or CSS.
+    // If it already has the prefix, don't add it again.
+    return path.startsWith(prefix) ? path : `${prefix}${cleanPath}`;
 }
